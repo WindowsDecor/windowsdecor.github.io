@@ -25,19 +25,19 @@
                                         <div class="col-md-6 col-12">
                                             <div class="form-group">
                                                 <label for="first-name-column">About Us Title 1:</label>
-                                                <input type="text" name="title1" class="form-control" required />
+                                                <input type="text" name="title1" class="form-control" />
                                             </div>
                                         </div>
                                         <div class="col-md-6 col-12">
                                             <div class="form-group">
                                                 <label for="last-name-column">About Us Title 1:</label>
-                                                <input type="text" name="title2" class="form-control" required />
+                                                <input type="text" name="title2" class="form-control" />
                                             </div>
                                         </div>
                                           <div class="col-md-6 col-12">
                                             <div class="form-group">
                                                 <label for="last-name-column">Description:</label>
-                                                <input type="text" name="description" class="form-control" required />
+                                                <input type="text" name="description" class="form-control" />
                                             </div>
                                         </div>
 
@@ -89,7 +89,7 @@
                         <tbody>
                             {{#each aboutUsDetails}}
                             <tr>
-                                <td><img src="/aboutUs/{{this._id}}.jpg" alt="" style="width: 70px;height:70px"></td>
+                                <td><img src="https://windows.mos.ap-southeast-2.sufybkt.com/aboutUs/{{this._id}}.jpg" alt="" style="width: 70px;height:70px"></td>
                                 <td>{{this.title1}}</td>
                                 <td>{{this.title2}}</td>
                                 <td>{{this.description}}</td>

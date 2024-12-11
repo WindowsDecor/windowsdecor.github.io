@@ -37,7 +37,7 @@ var db=require('./config/connection')
 
 app.use(session({
   secret: 'key',
-  cookie: { maxAge:60000000}
+  cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 }
 }))
 //db connection
 db.connect((err)=>{

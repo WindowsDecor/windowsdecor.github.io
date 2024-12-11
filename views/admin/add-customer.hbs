@@ -48,6 +48,8 @@
 
                                                 <option value="Designer">Designer</option>
                                                 <option value="Casual Customer">Casual Customer</option>
+                                                <option value="Professional customer">Professional Customer</option>
+                                                <option value="official Customer">Official Customer</option>    
                                             </select>
                                         </div>
                                         <div class="form-group mb-3">
@@ -66,8 +68,12 @@
                                         </div> --}}
                                         <div class="form-group">
                                             <label for="">Branch Visted</label>
-                                            <input type="text" class="form-control" id="" name="branchVisited"
-                                                required />
+                                            <select class="form-control" id="" name="branchVisited" required>
+                                                <option disabled selected>Select</option>
+                                                {{#each list}}
+                                                <option value={{this.place}}>{{this.place}}</option>
+                                                {{/each}}
+                                            </select>
                                         </div>
                                         <div class="form-group">
                                             <label for="">Total Purchase Amount</label>

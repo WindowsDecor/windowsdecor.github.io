@@ -1,4 +1,19 @@
 <section id="main">
+       <script>
+            function totalamountHandle(event) {
+                const value = parseFloat(event.target.value);
+                const name = event.target.name;
+                const totalAmount = document.getElementById('totalAmount');
+                if (name == "quantity") {
+                    const priceAmt = document.getElementById('price');
+                    totalAmount.value = value * priceAmt.value;
+                }
+                else if (name === "price") {
+                    const quantityNo = document.getElementById('quantity');
+                    totalAmount.value = value * quantityNo.value;
+                }
+            }
+        </script>
     <div class="page-heading">
         <div class="page-title">
             <div class="row">
@@ -55,19 +70,20 @@
                                            <div class="col-md-6 col-12">
                                             <div class="form-group">
                                                 <label for="">Quantity</label>
-                                                <input type="number" class="form-control" id="" name="quantity" value="{{dealerDetail.quantity}}"  required />
+                                                <input type="number" class="form-control" id="quantity" name="quantity" onchange="totalamountHandle(event)" value="{{dealerDetail.quantity}}"  required />
                                             </div>
                                         </div>
                                            <div class="col-md-6 col-12">
                                             <div class="form-group">
                                                 <label for="">Price</label>
-                                                <input type="number" class="form-control" id="" name="price" value="{{dealerDetail.price}}"  required />
+                                                <input type="number" class="form-control" id="price" name="price" onchange="totalamountHandle(event)" value="{{dealerDetail.price}}"  required />
                                             </div>
                                         </div>
                                           <div class="col-md-6 col-12">
                                             <div class="form-group">
                                                 <label for="">Total Amount</label>
-                                                <input type="number" class="form-control" id="" name="totalAmount" value="{{dealerDetail.totalAmount}}" required />
+                                                <input type="number" class="form-control" id="totalAmount" name="totalAmount" value="{{dealerDetail.totalAmount}}" required
+                                             />
                                             </div>
                                         </div>
                                         <div class="col-md-6 col-12">

@@ -18,7 +18,7 @@
                             <tr>
                                 <th>Name</th>
                                 <th>Image</th>
-                                <th>Email</th>
+                                <th>Mobile</th>
                                 <th>Status</th>
                                 <th>Options</th>
                                 <th>Options</th>
@@ -28,8 +28,8 @@
                             {{#each userlist}}
                             <tr>
                                 <td>{{this.name}}</td>
-                                <td><img src="/profile/{{this._id}}.jpg" alt="" style="width: 70px;heiht:70px"></td>
-                                <td>{{this.email}}</td>
+                                <td><img src="https://windows.mos.ap-southeast-2.sufybkt.com/profile/{{this._id}}.jpg" alt="" style="width: 70px;heiht:70px"></td>
+                                <td>{{this.mobile}}</td>
                                 {{#if this.blockuser}}
                                 <td>Not Active</td>
                                 {{else}}

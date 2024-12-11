@@ -22,44 +22,53 @@
                                         <div class="col-md-6 col-12">
                                             <div class="form-group">
                                                 <label for="">Product</label>
-                                                <input type="text" class="form-control" id="" name="product" value="{{monthlySquareFeet.product}}" required />
+                                                <input type="text" class="form-control" id="" name="product"
+                                                    value="{{monthlySquareFeet.product}}" required />
                                             </div>
                                         </div>
-                                        <div class="form-group col-md-6 col-12">
-                                            <label for="">Product Type</label>
-                                            <select class="form-control" name="productType" id="">
-                                                <option value="{{monthlySquareFeet.productType}}" >{{monthlySquareFeet.productType}} </option>
-                                                <option value="JD">JD </option>
-                                                <option value="Windows">Windows</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-md-6 col-12">
-                                            <div class="form-group">
-                                                <label for="">Total</label>
-                                                <input type="number" class="form-control" id="" name="total" value="{{monthlySquareFeet.total}}" required />
-                                            </div>
-                                        </div>
+                                       
 
-
-                                        <div class="col-md-6 col-12">
-                                            <div class="form-group">
-                                                <label for="">Month Year</label>
-                                                <input type="string" class="form-control" id="" name="monthYear" value="{{monthlySquareFeet.monthYear}}" 
-                                                    required />
-                                            </div>
-                                        </div>
-
-
+                                       <div class="col-md-6 col-12">
                                         <div class="form-group">
-                                            <button type="submit" class="btn btn-primary">Submit</button>
+                                            <label for="">JD Amount</label>
+                                            <input type="integer" class="form-control" name="JdAmount" value="{{monthlySquareFeet.JdAmount}}" id="" />
                                         </div>
                                     </div>
-                                </form>
+                                    <div class="col-md-6 col-12">
+                                        <div class="form-group">
+                                            <label for="">Windows Amount</label>
+                                            <input type="integer" class="form-control" id="" value="{{monthlySquareFeet.WinAmount}}" name="WinAmount" required />
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6 col-12">
+                                        <div class="form-group">
+                                            <label for="">Total</label>
+                                            <input type="integer" class="form-control" id="" name="total"
+                                                value="{{monthlySquareFeet.total}}" required />
+                                        </div>
+                                    </div>
+
+
+                                    <div class="col-md-6 col-12">
+                                        <div class="form-group">
+                                            <label for="">Month Year</label>
+                                            <input type="string" class="form-control" id="" name="monthYear"
+                                                value="{{monthlySquareFeet.monthYear}}" required />
+                                        </div>
+                                    </div>
+
+
+                                    <div class="form-group">
+                                        <button type="submit" class="btn btn-primary">Submit</button>
+                                    </div>
                             </div>
+                            </form>
                         </div>
                     </div>
                 </div>
             </div>
-        </section>
     </div>
+</section>
+</div>
 </section>

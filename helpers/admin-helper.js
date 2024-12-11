@@ -3,6 +3,7 @@ var collections = require('../config/collection')
 var objectId = require('mongodb').ObjectID;
 var bcrypt = require('bcrypt')
 const moment = require('moment')
+const { v4: uuidv4 } = require('uuid');
 
 module.exports = {
    //Banner Section
@@ -13,8 +14,8 @@ module.exports = {
          });
       })
    },
-   
-   
+
+
    getALLBanners: () => {
       return new Promise((resolve, reject) => {
          db.get().collection(collections.BANNER_COLLECTION).find().toArray().then((banner) => {
@@ -40,7 +41,7 @@ module.exports = {
 
                   var bannerIdToString = bannerId.toString()
                   var bannerIdsToDeactivate = bannerIds.filter(function (f) { return f !== bannerIdToString })
-       
+
                   if (bannerIdsToDeactivate) {
                      for (i = 0; i < bannerIdsToDeactivate.length; i++) {
                         db.get().collection(collections.BANNER_COLLECTION).updateOne({ _id: objectId(bannerIdsToDeactivate[i]) },
@@ -89,7 +90,7 @@ module.exports = {
 
    },
 
-    //Banner Section End
+   //Banner Section End
 
 
    //About Us section
@@ -167,7 +168,7 @@ module.exports = {
             $set: {
                title1: aboutUsDetail.title1,
                title2: aboutUsDetail.title2,
-               description:aboutUsDetail.description,
+               description: aboutUsDetail.description,
             }
          }).then((response) => {
             resolve(response)
@@ -217,7 +218,7 @@ module.exports = {
             $set: {
                place: branchDetail.place,
                mobile: branchDetail.mobile,
-               address:branchDetail.address,
+               address: branchDetail.address,
             }
          }).then((response) => {
             resolve(response)
@@ -350,26 +351,58 @@ module.exports = {
          })
 
       })
+   },
+   otpsent: (number) => {
+      return new Promise(async (resolve, reject) => {
+         let otp = Math.floor(100000 + Math.random() * 900000);
+         let token = uuidv4();
+         let data = await db.get().collection(collections.OTP_COLLECTION).insertOne({ otp, token, number });
+         if (data) resolve({ token, otp, number })
+         else reject()
+      })
+   },
+   verifyOTP: (otp, id, number) => {
+      return new Promise(async (resolve, reject) => {
+         let data = await db.get().collection(collections.OTP_COLLECTION).findOne({ token: id });
+         console.log("called data");
+         console.log(data);
+
+         if (data && data.otp == otp && data.number == number) resolve(data);
+         else reject();
+      })
    }
    , doLogin: (data) => {
       return new Promise(async (resolve, reject) => {
-         let response = {}
-         let admin = {}
-         admin.email = "adon@gmail.com"
-         admin.password = "$2a$10$0GacidLXw.NVGMi7EA8zb.A3MCyYIsuPgn6Ar.sXDjX6zpJIrkfeG"
-         if (admin.email === data.email) {
-            bcrypt.compare(data.password, admin.password).then((status) => {
-               if (status) {
-                  response.admin = admin
-                  response.status = true
-                  resolve(response)
-               } else {
-                  resolve({ status: false })
-               }
-            })
-         } else {
+         // let response = {}
+         // let admin = {}
+         console.log(data);
+         const logindata = await db.get().collection(collections.EMPLOYEE_COLLECTION).findOne({ email: data.email, mobile: data.mobile })
+         // console.log(logindata);
+         if (logindata) {
+            logindata.status = true
+            resolve(logindata)
+         }
+         else {
             resolve({ status: false })
          }
+         resolve({ status: false })
+
+         // console.log(data.password);
+         // admin.email = "adon@gmail.com"
+         // admin.password = "$2a$10$0GacidLXw.NVGMi7EA8zb.A3MCyYIsuPgn6Ar.sXDjX6zpJIrkfeG"
+         // if (admin.email === admin.email) {
+         //    bcrypt.compare("1", admin.password).then((status) => {
+         //       if (status) {
+         //          response.admin = admin
+         //          response.status = true
+         //          resolve(response)
+         //       } else {
+         //          resolve({ status: false })
+         //       }
+         //    })
+         // } else {
+         //    resolve({ status: false })
+         // }
       })
 
    }
@@ -398,7 +431,7 @@ module.exports = {
       })
    }
    // User Section End
-   
+
    , getALLOrders: () => {
       return new Promise(async (resolve, reject) => {
          let orders = await db.get().collection(collections.ORDER_COLLECTION).find().toArray()
@@ -638,17 +671,18 @@ module.exports = {
    getALLCustomers: () => {
       return new Promise(async (resolve, reject) => {
          let customers = await db.get().collection(collections.CUSTOMER_COLLECTION).find().toArray()
+         console.log(customers);
          resolve(customers)
       })
    },
-   deleteCustomer : (customerId) => {
+   deleteCustomer: (customerId) => {
       return new Promise((resolve, reject) => {
          db.get().collection(collections.CUSTOMER_COLLECTION).removeOne({ _id: objectId(customerId) }).then((response) => {
             resolve(response);
          })
 
       })
-      
+
    },
    getCustomertDetails: (customerId) => {
       return new Promise(async (resolve, reject) => {
@@ -657,11 +691,63 @@ module.exports = {
          })
       })
    },
+   getallCustomertDetails: () => {
+      return new Promise(async (resolve, reject) => {
+         let customers = await db.get().collection(collections.CUSTOMER_COLLECTION).find().toArray()
+         resolve(customers)
+      })
+   },
+   addEmployeeDetails: (employee) => {
+      return new Promise(async (resolve, reject) => {
+         employee.totalAmount = 0;
+         let data = await db.get().collection(collections.EMPLOYEE_COLLECTION).insertOne(employee);
+         if (data) {
+            resolve(data.ops[0]._id);
+         }
+         else {
+            reject("Failed to insert employee details");
+         }
+      })
+   },
+   getallEmployeeDetails: () => {
+      return new Promise(async (resolve, reject) => {
+         let employees = await db.get().collection(collections.EMPLOYEE_COLLECTION).find().toArray()
+         resolve(employees)
+      })
+   },
+   getIndividualEmployessDetails: (id) => {
+      return new Promise(async (resolve, reject) => {
+         let employees = await db.get().collection(collections.EMPLOYEE_COLLECTION).findOne({ _id: objectId(id) })
+         resolve(employees)
+      })
+   },
+
+   updateEmployeeDetails: (id, details) => {
+      return new Promise(async (resolve, reject) => {
+         const updateFields = { $set: { ...details } };
+         let data = await db.get().collection(collections.EMPLOYEE_COLLECTION).updateOne({ _id: objectId(id) },
+            updateFields
+         ).then((response) => {
+            resolve(response)
+         }).catch((res) => {
+            reject(res);
+         })
+      })
+   },
+
+   deleteEmployeeDetails: (id) => {
+      return new Promise((resolve, reject) => {
+         db.get().collection(collections.EMPLOYEE_COLLECTION).removeOne({ _id: objectId(id) }).then((response) => {
+            resolve(response);
+         })
+      })
+   },
+
    updateCustomerDetails: (customerId, customerDetails) => {
       return new Promise(async (resolve, reject) => {
          const updateFields = { $set: { ...customerDetails } };
          await db.get().collection(collections.CUSTOMER_COLLECTION).updateOne({ _id: objectId(customerId) },
-         updateFields
+            updateFields
          ).then((response) => {
             resolve(response)
          })
@@ -670,24 +756,84 @@ module.exports = {
    //credit-book
    addCreditBook: (creditBook) => {
       return new Promise(async (resolve, reject) => {
+         const { staffname } = creditBook
          let data = await db.get().collection(collections.CREDIT_BOOK_COLLECTION).insertOne(creditBook);
-         resolve(data.ops[0]._id);
+         let employee = await db.get().collection(collections.EMPLOYEE_COLLECTION).findOne({ _id: objectId(staffname) })
+         if (staffname) {
+            if (employee) {
+               if (creditBook.debitAmount != 0 || creditBook.creditAmount != 0) {
+                  const totalAmount = parseFloat(employee.totalAmount ?? 0);
+                  const creditAmount = parseFloat(creditBook.creditAmount);
+                  const debitAmount = parseFloat(creditBook.debitAmount);
+                  const newTotalAmount = totalAmount + creditAmount - debitAmount;
+                  if (newTotalAmount > 0) {
+                     employee.totalAmount = newTotalAmount.toString();
+                     const creditBookRecord = {
+                        ...data.ops[0],
+                        oldbalance: totalAmount,
+                        currentAmount: newTotalAmount,
+                        creditAmount: creditAmount,
+                        debitAmount: debitAmount
+                     };
+                     if (employee.creditBook) {
+                        employee.creditBook.push(creditBookRecord)
+                     }
+                     else {
+                        employee.creditBook = [creditBookRecord]
+                     }
+                     console.log(employee);
+                     const updateFields = { $set: { ...employee } };
+                     db.get().collection(collections.EMPLOYEE_COLLECTION).updateOne({ _id: objectId(staffname) }, updateFields)
+                     resolve({ data: data, status: employee });
+                  } else {
+                     reject("Insufficient balance");
+                  }
+               }
+               else {
+                  reject("debit and credit value is Zero")
+               }
+            }
+            else {
+               reject("Employee not found")
+            }
+         }
+         else {
+            reject("employee not found ");
+         }
       })
    },
+   getOldBalance: (user) => {
+      return new Promise(async (resolve, reject) => {
+         let employee = await db.get().collection(collections.EMPLOYEE_COLLECTION).findOne({ _id: objectId(user) })
+         if (employee) {
+            if (employee.totalAmount) {
+               resolve(employee.totalAmount)
+            }
+            else {
+               resolve("0")
+            }
+         }
+         else {
+            reject("user not found")
+         }
+
+      })
+   }
+   ,
    getALLCreditBooks: () => {
       return new Promise(async (resolve, reject) => {
          let creditBooks = await db.get().collection(collections.CREDIT_BOOK_COLLECTION).find().toArray()
          resolve(creditBooks)
       })
    },
-   deleteCreditBook : (creditBookId) => {
+   deleteCreditBook: (creditBookId) => {
       return new Promise((resolve, reject) => {
          db.get().collection(collections.CREDIT_BOOK_COLLECTION).removeOne({ _id: objectId(creditBookId) }).then((response) => {
             resolve(response);
          })
 
       })
-      
+
    },
    getCreditBookDetails: (creditBookId) => {
       return new Promise(async (resolve, reject) => {
@@ -700,14 +846,14 @@ module.exports = {
       return new Promise(async (resolve, reject) => {
          const updateFields = { $set: { ...creditBookDetails } };
          await db.get().collection(collections.CREDIT_BOOK_COLLECTION).updateOne({ _id: objectId(creditBookId) },
-         updateFields
+            updateFields
          ).then((response) => {
             resolve(response)
          })
       })
    },
-     //Dealer Section
-     addDealerDetail: (dealerDetail) => {
+   //Dealer Section
+   addDealerDetail: (dealerDetail) => {
       return new Promise(async (resolve, reject) => {
          let data = await db.get().collection(collections.DEALER_COLLECTION).insertOne(dealerDetail);
          resolve(data.ops[0]._id);
@@ -719,14 +865,14 @@ module.exports = {
          resolve(dealerDetails)
       })
    },
-   deleteDealerDetail : (dealerDetailId) => {
+   deleteDealerDetail: (dealerDetailId) => {
       return new Promise((resolve, reject) => {
          db.get().collection(collections.DEALER_COLLECTION).removeOne({ _id: objectId(dealerDetailId) }).then((response) => {
             resolve(response);
          })
 
       })
-      
+
    },
    getDealerDetail: (dealerDetailId) => {
       return new Promise(async (resolve, reject) => {
@@ -739,155 +885,296 @@ module.exports = {
       return new Promise(async (resolve, reject) => {
          const updateFields = { $set: { ...dealerDetail } };
          await db.get().collection(collections.DEALER_COLLECTION).updateOne({ _id: objectId(dealerDetailId) },
-         updateFields
+            updateFields
          ).then((response) => {
             resolve(response)
          })
       })
    },
    //Monthly Square Feet Section
-    addMonthlySquareFeet: (monthlySquareFeet) => {
-         return new Promise(async (resolve, reject) => {
-            let data = await db.get().collection(collections.MONTHLY_SQUARE_FEET).insertOne(monthlySquareFeet);
-            resolve(data.ops[0]._id);
+   addMonthlySquareFeet: (monthlySquareFeet) => {
+      return new Promise(async (resolve, reject) => {
+         let data = await db.get().collection(collections.MONTHLY_SQUARE_FEET).insertOne(monthlySquareFeet);
+         resolve(data.ops[0]._id);
+      })
+   },
+   getALLMonthlySquareFeet: () => {
+      return new Promise(async (resolve, reject) => {
+         let monthlySquareFeet = await db.get().collection(collections.MONTHLY_SQUARE_FEET).find().toArray()
+         resolve(monthlySquareFeet)
+      })
+   },
+   getSingleMonthlySquareFeet: (type) => {
+      return new Promise(async (resolve, reject) => {
+         let monthlySquareFeet = await db.get().collection(collections.MONTHLY_SQUARE_FEET).find({ productType: type }).toArray()
+         resolve(monthlySquareFeet)
+      })
+   },
+   deleteMonthlySquareFeet: (monthlySquareFeetId) => {
+      return new Promise((resolve, reject) => {
+         db.get().collection(collections.MONTHLY_SQUARE_FEET).removeOne({ _id: objectId(monthlySquareFeetId) }).then((response) => {
+            resolve(response);
          })
-      },
-      getALLMonthlySquareFeet: () => {
-         return new Promise(async (resolve, reject) => {
-            let monthlySquareFeet = await db.get().collection(collections.MONTHLY_SQUARE_FEET).find().toArray()
+
+      })
+
+   },
+   getMonthlySquareFeet: (monthlySquareFeetId) => {
+      return new Promise(async (resolve, reject) => {
+         await db.get().collection(collections.MONTHLY_SQUARE_FEET).findOne({ _id: objectId(monthlySquareFeetId) }).then((monthlySquareFeet) => {
             resolve(monthlySquareFeet)
          })
-      },
-      deleteMonthlySquareFeet : (monthlySquareFeetId) => {
-         return new Promise((resolve, reject) => {
-            db.get().collection(collections.MONTHLY_SQUARE_FEET).removeOne({ _id: objectId(monthlySquareFeetId) }).then((response) => {
-               resolve(response);
-            })
-   
-         })
-         
-      },
-      getMonthlySquareFeet: (monthlySquareFeetId) => {
-         return new Promise(async (resolve, reject) => {
-            await db.get().collection(collections.MONTHLY_SQUARE_FEET).findOne({ _id: objectId(monthlySquareFeetId) }).then((monthlySquareFeet) => {
-               resolve(monthlySquareFeet)
-            })
-         })
-      },
-      updateMonthlySquareFeet: (monthlySquareFeetId, monthlySquareFeet) => {
-         return new Promise(async (resolve, reject) => {
-            const updateFields = { $set: { ...monthlySquareFeet } };
-            await db.get().collection(collections.MONTHLY_SQUARE_FEET).updateOne({ _id: objectId(monthlySquareFeetId) },
+      })
+   },
+   updateMonthlySquareFeet: (monthlySquareFeetId, monthlySquareFeet) => {
+      return new Promise(async (resolve, reject) => {
+         const updateFields = { $set: { ...monthlySquareFeet } };
+         await db.get().collection(collections.MONTHLY_SQUARE_FEET).updateOne({ _id: objectId(monthlySquareFeetId) },
             updateFields
-            ).then((response) => {
-               resolve(response)
-            })
+         ).then((response) => {
+            resolve(response)
          })
-      },
-  //get product detail based on singele order id
-  getOrderproduct: (orderId) => {
-   return new Promise(async (resolve) => {
-     // console.log(orderId)
-     let OrderProductItems = await db.get().collection(collections.ORDER_COLLECTION).aggregate([{ $match: { _id: objectId(orderId) } },
+      })
+   },
+   //get product detail based on singele order id
+   getOrderproduct: (orderId) => {
+      return new Promise(async (resolve) => {
+         // console.log(orderId)
+         let OrderProductItems = await db.get().collection(collections.ORDER_COLLECTION).aggregate([{ $match: { _id: objectId(orderId) } },
          {
-           $unwind: "$products",
+            $unwind: "$products",
          },
          {
-           $project: {
-             item: "$products.item",
-             quantity: "$products.quantity",
-           },
+            $project: {
+               item: "$products.item",
+               quantity: "$products.quantity",
+            },
          },
          {
-           $lookup: {
-             from: collections.PRODUCT_COLLECTION,
-             localField: "item",
-             foreignField: "_id",
-             as: "productDetails",
-           },
+            $lookup: {
+               from: collections.PRODUCT_COLLECTION,
+               localField: "item",
+               foreignField: "_id",
+               as: "productDetails",
+            },
          },
          {
-           $project: {
-             item: 1,
-             quantity: 1,
-             productDetails: { $arrayElemAt: ["$productDetails", 0] },
-           },
+            $project: {
+               item: 1,
+               quantity: 1,
+               productDetails: { $arrayElemAt: ["$productDetails", 0] },
+            },
          },
-       ]).toArray();
-     //console.log(OrderProductItems)
-     resolve(OrderProductItems);
-   });
- },
- deleteOrder: (orderId) => {
-   return new Promise((resolve, reject) => {
-      db.get().collection(collections.ORDER_COLLECTION).removeOne({ _id: objectId(orderId) }).then((response) => {
-         resolve(response);
+         ]).toArray();
+         //console.log(OrderProductItems)
+         resolve(OrderProductItems);
+      });
+   },
+   deleteOrder: (orderId) => {
+      return new Promise((resolve, reject) => {
+         db.get().collection(collections.ORDER_COLLECTION).removeOne({ _id: objectId(orderId) }).then((response) => {
+            resolve(response);
+         })
+
+      })
+   },
+
+   getALLContacts: () => {
+      return new Promise(async (resolve, reject) => {
+         let contacts = await db.get().collection(collections.CONTACT_COLLECTION).find().toArray()
+         resolve(contacts)
+      })
+   },
+   deleteContact: (contactId) => {
+      return new Promise((resolve, reject) => {
+         db.get().collection(collections.CONTACT_COLLECTION).removeOne({ _id: objectId(contactId) }).then((response) => {
+            resolve(response);
+         })
+
       })
 
-   })
-},
+   },
+   getALLCarts: () => {
+      return new Promise(async (resolve, reject) => {
+         let carts = await db.get().collection(collections.CART_COLLECTION).find().toArray()
+         resolve(carts)
+      })
+   },
+   getCartproduct: (cartId) => {
+      return new Promise(async (resolve) => {
+         // console.log(orderId)
+         let cartProductItems = await db.get().collection(collections.CART_COLLECTION).aggregate([{ $match: { _id: objectId(cartId) } },
+         {
+            $unwind: "$products",
+         },
+         {
+            $project: {
+               item: "$products.item",
+               quantity: "$products.quantity",
+            },
+         },
+         {
+            $lookup: {
+               from: collections.PRODUCT_COLLECTION,
+               localField: "item",
+               foreignField: "_id",
+               as: "productDetails",
+            },
+         },
+         {
+            $project: {
+               item: 1,
+               quantity: 1,
+               productDetails: { $arrayElemAt: ["$productDetails", 0] },
+            },
+         },
+         ]).toArray();
+         //console.log(OrderProductItems)
+         resolve(cartProductItems);
+      });
+   },
+   deleteCart: (cartId) => {
+      return new Promise((resolve, reject) => {
+         db.get().collection(collections.CART_COLLECTION).removeOne({ _id: objectId(cartId) }).then((response) => {
+            resolve(response);
+         })
 
-getALLContacts: () => {
-   return new Promise(async (resolve, reject) => {
-      let contacts = await db.get().collection(collections.CONTACT_COLLECTION).find().toArray()
-      resolve(contacts)
-   })
-},
-deleteContact : (contactId) => {
-   return new Promise((resolve, reject) => {
-      db.get().collection(collections.CONTACT_COLLECTION).removeOne({ _id: objectId(contactId) }).then((response) => {
-         resolve(response);
+      })
+   },
+   getHistoryCreditCard: (creditBookId) => {
+      return new Promise(async (resolve, reject) => {
+         const employee = await db.get().collection(collections.EMPLOYEE_COLLECTION).findOne({ _id: objectId(creditBookId) })
+         if (employee) {
+            if (employee.creditBook) {
+               resolve(employee.creditBook);
+            }
+            else {
+               console.log("Called empty");
+               resolve([]);
+            }
+         }
+         else {
+            reject("internal server error")
+         }
+      })
+   },
+   addMothlyClothFeet: (data) => {
+      return new Promise(async (resolve, reject) => {
+         const cloth = await db.get().collection(collections.MONTHLY_CLOTH_FEET).insertOne(data)
+         if (cloth) {
+            resolve(cloth.ops[0]._id);
+         }
+         else {
+            reject("internal server error")
+         }
+      })
+   },
+   getMonthlyClothFeet: (type) => {
+      return new Promise(async (resolve, reject) => {
+         const cloth = await db.get().collection(collections.MONTHLY_CLOTH_FEET).find({ type: type }).toArray()
+         if (cloth) {
+            resolve(cloth);
+         }
+         else {
+            reject("internal server error")
+         }
+      })
+   },
+   getIndividualClothFeet: (id) => {
+      return new Promise(async (resolve, reject) => {
+         const cloth = await db.get().collection(collections.MONTHLY_CLOTH_FEET).findOne({ _id: objectId(id) })
+         if (cloth) {
+            console.log(cloth);
+
+            resolve(cloth);
+         }
+         else {
+            reject("internal server error")
+         }
+      })
+   },
+   updateClothFeet: (monthlySquareFeetId, monthlySquareFeet) => {
+      return new Promise(async (resolve, reject) => {
+         const updateFields = { $set: { ...monthlySquareFeet } };
+         await db.get().collection(collections.MONTHLY_CLOTH_FEET).updateOne({ _id: objectId(monthlySquareFeetId) },
+            updateFields
+         ).then(async () => {
+            const response = await db.get().collection(collections.MONTHLY_CLOTH_FEET).findOne({ _id: objectId(monthlySquareFeetId) })
+            console.log("called success");
+            resolve(response)
+
+         }).catch(() => {
+            reject("internal server error")
+         })
+      })
+   },
+   getDeleteClothFeet: (id) => {
+      return new Promise(async (resolve, reject) => {
+         db.get().collection(collections.MONTHLY_CLOTH_FEET).removeOne({ _id: objectId(id) }).then((response) => {
+            resolve(response);
+         })
+            .catch(() => {
+               reject("internal server error")
+            })
+
+      })
+   },
+
+   addBlogUsDetails: (blog) => {
+      return new Promise(async (resolve, reject) => {
+         db.get().collection(collections.BLOG_US_COLLECTION).insertOne(blog).then((response) => {
+            resolve(response.ops[0]._id)
+         });
+      })
+   },
+   getBlogDetails: () => {
+      return new Promise(async (resolve, reject) => {
+         const data = db.get().collection(collections.BLOG_US_COLLECTION).find().toArray()
+         if (data) {
+            resolve(data)
+         }
+         else {
+            reject("internal server error")
+         }
       })
 
-   })
-   
-},
- getALLCarts: () => {
-   return new Promise(async (resolve, reject) => {
-      let carts = await db.get().collection(collections.CART_COLLECTION).find().toArray()
-      resolve(carts)
-   })
-},
-getCartproduct: (cartId) => {
-   return new Promise(async (resolve) => {
-     // console.log(orderId)
-     let cartProductItems = await db.get().collection(collections.CART_COLLECTION).aggregate([{ $match: { _id: objectId(cartId) } },
-         {
-           $unwind: "$products",
-         },
-         {
-           $project: {
-             item: "$products.item",
-             quantity: "$products.quantity",
-           },
-         },
-         {
-           $lookup: {
-             from: collections.PRODUCT_COLLECTION,
-             localField: "item",
-             foreignField: "_id",
-             as: "productDetails",
-           },
-         },
-         {
-           $project: {
-             item: 1,
-             quantity: 1,
-             productDetails: { $arrayElemAt: ["$productDetails", 0] },
-           },
-         },
-       ]).toArray();
-     //console.log(OrderProductItems)
-     resolve(cartProductItems);
-   });
- },
- deleteCart: (cartId) => {
-   return new Promise((resolve, reject) => {
-      db.get().collection(collections.CART_COLLECTION).removeOne({ _id: objectId(cartId) }).then((response) => {
-         resolve(response);
+   },
+   getindividualBlogDetails: (Id) => {
+      return new Promise(async (resolve, reject) => {
+         const data = db.get().collection(collections.BLOG_US_COLLECTION).findOne({ _id: objectId(Id) })
+         if (data) {
+            resolve(data)
+         }
+         else {
+            reject("internal server error")
+         }
       })
+   },
+   updateBlogDetails: (id, blogDetails) => {
+      return new Promise(async (resolve, reject) => {
+         const updateFields = { $set: { ...blogDetails } };
+         await db.get().collection(collections.BLOG_US_COLLECTION).updateOne({ _id: objectId(id) },
+            updateFields
+         ).then(() => {
+            resolve(id)
+         }).catch(() => {
+            reject("internal server error")
+         })
+      })
+   },
+   deleteBlogDetails: (Id) => {
+      return new Promise(async (resolve, reject) => {
+         db.get().collection(collections.BLOG_US_COLLECTION).removeOne({ _id: objectId(Id) }).then((data) => {
+            resolve(data)
 
-   })
-},
+         }).catch((err) => {
+            reject(err)
+         })
+      })
+   }
+
+
+
+
 }
 

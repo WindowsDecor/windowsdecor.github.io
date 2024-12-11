@@ -15,7 +15,11 @@ module.exports={
     CONTACT_COLLECTION:"contact",
     CREDIT_BOOK_COLLECTION:"credit-book",
     DEALER_COLLECTION:"dealer",
-    MONTHLY_SQUARE_FEET:"monthlySquareFeet"
+    MONTHLY_SQUARE_FEET:"monthlySquareFeet",
+    MONTHLY_CLOTH_FEET: "monthlyClothFeet",
+    BLOG_US_COLLECTION:"blogUs",
+    OTP_COLLECTION:"otpCall",
+    EMPLOYEE_COLLECTION:"employee"
 }
 
 

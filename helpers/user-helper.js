@@ -4,7 +4,8 @@ var bcrypt = require("bcrypt");
 var objectId = require("mongodb").ObjectID;
 const Razorpay = require("razorpay");
 const { resolve } = require("url");
-const moment = require('moment')
+const moment = require('moment');
+const { v4: uuidv4 } = require('uuid');
 
 var instance = new Razorpay({
   key_id: process.env.key_id,
@@ -19,6 +20,7 @@ module.exports = {
         resolve({ mobileExist })
       } else {
         userData.password = await bcrypt.hash(userData.password, 10);
+        userData.verify = false
         userData.blockuser = false
         db.get().collection(collections.USER_COLLECTION).insertOne(userData).then((data) => {
           resolve(data.ops[0]);
@@ -26,7 +28,48 @@ module.exports = {
       }
     });
   },
-
+  existNumber: (mobile) => {
+    return new Promise(async (resolve, reject) => {
+      let mobileExist = await db.get().collection(collections.USER_COLLECTION).findOne({
+        mobile: mobile
+      })
+      if (mobileExist) {
+        resolve({ mobileExist })
+      } else {
+        resolve({ mobileExist: false })
+      }
+    })
+  },
+  otpsent: (number) => {
+    return new Promise(async (resolve, reject) => {
+      console.log(number + "....number");
+      let otp = Math.floor(100000 + Math.random() * 900000);
+      let token = uuidv4();
+      let data = await db.get().collection(collections.OTP_COLLECTION).insertOne({ otp, token, number });
+      if (data) resolve({ token, otp, number })
+      else reject()
+    })
+  },
+  verifyOTP: (otp, id, number, verificationOnly = false) => {
+    return new Promise(async (resolve, reject) => {
+      let data = await db.get().collection(collections.OTP_COLLECTION).findOne({ token: id });
+      if (!verificationOnly && data) {
+        if (data && data.otp == otp && data.number == number) {
+          let datanew = await db.get().collection(collections.USER_COLLECTION).findOne({ mobile: number });
+          if (datanew) {
+            datanew.verify = true
+            await db.get().collection(collections.USER_COLLECTION).save(datanew);
+          }
+          resolve(data);
+        }
+        else reject();
+      }
+      else {
+        if (data) resolve(data)
+        else reject()
+      }
+    })
+  },
 
   doLogin: (userData) => {
     return new Promise(async (resolve, reject) => {
@@ -35,7 +78,7 @@ module.exports = {
       if (user) {
         bcrypt.compare(userData.password, user.password).then((status) => {
           if (status) {
-            if (user.blockuser) {
+            if (user.blockuser && user.verify) {
               response.blockuser = true
               resolve(response)
             } else {
@@ -105,48 +148,38 @@ module.exports = {
     });
   },
 
-  getCartProducts: (userId) => {
-    return new Promise(async (resolve) => {
-      // console.log(userId)
-      let cartItems = await db.get().collection(collections.CART_COLLECTION).aggregate([{ $match: { user: objectId(userId) } },
-      {
-        $unwind: "$products",
-      },
-      {
-        $project: {
-          item: "$products.item",
-          quantity: "$products.quantity",
+  getCartProducts: async (userId) => {
+    try {
+      const cartItems = await db.get().collection(collections.CART_COLLECTION).aggregate([
+        { $match: { user: objectId(userId) } },
+        { $unwind: "$products" },
+        {
+          $project: {
+            item: "$products.item",
+            quantity: { $toInt: "$products.quantity" }, // Ensure quantity is an integer
+          },
         },
-      },
-      {
-        $lookup: {
-          from: collections.PRODUCT_COLLECTION,
-          localField: "item",
-          foreignField: "_id",
-          as: "productDetails",
+        {
+          $lookup: {
+            from: collections.PRODUCT_COLLECTION,
+            localField: "item",
+            foreignField: "_id",
+            as: "productDetails",
+          },
         },
-      },
-      {
-        $project: {
-          item: 1,
-          quantity: 1,
-          productDetails: { $arrayElemAt: ["$productDetails", 0] },
+        {
+          $project: {
+            item: 1,
+            quantity: 1,
+            productDetails: { $arrayElemAt: ["$productDetails", 0] },
+          },
         },
-      },
-        // {
-        //     $lookup:{
-        //         from:collections.PRODUCT_COLLECTION,
-        //         let:{productList:'$products'},
-        //         pipeline:[{
-        //             $match:{$expr:{$in:['$_id','$$productList']}}
-        //         }],
-        //         as:'productDetails'
-        //     }
-        // }
       ]).toArray();
-      // console.log(cartItems)
-      resolve(cartItems);
-    });
+      return cartItems;
+    } catch (error) {
+      console.error("Error fetching cart products:", error);
+      throw error;
+    }
   },
 
   getCartCount: (userId) => {
@@ -156,6 +189,8 @@ module.exports = {
       if (cart) {
         count = cart.products.length;
       }
+      console.log(count);
+
       resolve(count);
     });
   },
@@ -201,55 +236,45 @@ module.exports = {
     });
   },
 
-  getTotalAmount: (userId) => {
-    return new Promise(async (resolve) => {
-      // console.log(userId)
-      let total = await db.get().collection(collections.CART_COLLECTION).aggregate([{ $match: { user: objectId(userId) } },
-      {
-        $unwind: "$products",
-      },
-      {
-        $project: {
-          item: "$products.item",
-          quantity: "$products.quantity",
+  getTotalAmount: async (userId) => {
+    try {
+      const total = await db.get().collection(collections.CART_COLLECTION).aggregate([
+        { $match: { user: objectId(userId) } },
+        { $unwind: "$products" },
+        {
+          $lookup: {
+            from: collections.PRODUCT_COLLECTION,
+            localField: "products.item",
+            foreignField: "_id",
+            as: "productDetails",
+          },
         },
-      },
-      {
-        $lookup: {
-          from: collections.PRODUCT_COLLECTION,
-          localField: "item",
-          foreignField: "_id",
-          as: "productDetails",
+        {
+          $unwind: { path: "$productDetails", preserveNullAndEmptyArrays: true }
         },
-      },
-      {
-        $project: {
-          item: 1,
-          quantity: 1,
-          productDetails: { $arrayElemAt: ["$productDetails", 0] },
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          total: {
-            $sum: {
-              $multiply: ["$quantity", { $toInt: "$productDetails.price" }],
+        {
+          $group: {
+            _id: null,
+            total: {
+              $sum: {
+                $multiply: [
+                  "$products.quantity",
+                  { $toDouble: "$productDetails.price" }
+                ],
+              },
             },
           },
         },
-      },
       ]).toArray();
-      if (total.length > 0) {
-        if (total[0].total) {
-          resolve(total[0].total)
-        }
-
+      if (total.length > 0 && total[0].total) {
+        return total[0].total;
       } else {
-        resolve({ total: false })
+        return { total: false };
       }
-      //console.log(total)
-    });
+    } catch (error) {
+      console.error("Error fetching total amount:", error);
+      throw error;
+    }
   },
 
   placeOrder: (order, products, total) => {
@@ -352,6 +377,35 @@ module.exports = {
       });
     });
   },
+  forgotPassword: (userId, password) => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        // Hash the new password
+        const updatedPassword = await bcrypt.hash(password, 10);
+
+        // Update the user's password in the database
+        const result = await db.get().collection(collections.USER_COLLECTION).updateOne(
+          { mobile: userId },
+          {
+            $set: {
+              password: updatedPassword, // Use the hashed password
+            },
+          }
+        );
+
+        if (result.modifiedCount === 1) {
+          console.log("Password updated successfully");
+          resolve({ status: true });
+        } else {
+          console.log("No user found with this mobile number");
+          resolve({ status: false, message: "No user found with this mobile number" });
+        }
+      } catch (error) {
+        console.error("Error updating password:", error);
+        reject({ status: false, message: "An error occurred while updating the password" });
+      }
+    });
+  },
 
 
   getUserAddress: (userId) => {
@@ -382,8 +436,20 @@ module.exports = {
   },
   addContact: (contact) => {
     return new Promise(async (resolve, reject) => {
-       let data = await db.get().collection(collections.CONTACT_COLLECTION).insertOne(contact);
-       resolve(data.ops[0]._id);
+      let data = await db.get().collection(collections.CONTACT_COLLECTION).insertOne(contact);
+      resolve(data.ops[0]._id);
     })
- },
+  },
+  getBlogDetails: () => {
+    return new Promise(async (resolve, reject) => {
+      const data = db.get().collection(collections.BLOG_US_COLLECTION).find().toArray()
+      if (data) {
+        resolve(data)
+      }
+      else {
+        reject("internal server error")
+      }
+    })
+
+  },
 }

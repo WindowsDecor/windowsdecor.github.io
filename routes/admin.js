@@ -1,19 +1,22 @@
 var express = require('express');
 var router = express.Router();
-const adminHelper= require('../helpers/admin-helper')
+const adminHelper = require('../helpers/admin-helper')
 const userHelper = require('../helpers/user-helper');
-const fs=require('fs');
-var db=require('../config/connection');
-
+const fs = require('fs');
+var db = require('../config/connection');
+const { default: axios } = require('axios');
+const { uploadImage ,deleteImage} = require("../helpers/imageUpload");
 
 //twilio
-const accountSid =process.env.accountSid
+const accountSid = process.env.accountSid
 const authToken = process.env.authToken
-const messagingSid=process.env.messagingSid
-const client = require('twilio')(accountSid,authToken); 
+const messagingSid = process.env.messagingSid
+const client = require('twilio')(accountSid, authToken);
+const fastsmsapi = process.env.FASTSMSAPI;
+const fastsmsapikey = process.env.FASTSMSAPIKEY;
 
 const verifyLogin = (req, res, next) => {
-  if(db.get()===null){
+  if (db.get() === null) {
     res.render('user/something-went-wrong')
   }
   if (req.session.adminloggedIn) {
@@ -25,37 +28,86 @@ const verifyLogin = (req, res, next) => {
 
 
 /**Admin login section  */
-router.get("/", async(req, res) => {
+router.get("/", async (req, res) => {
   let admin = req.session.adminloggedIn;
   if (admin) {
-      // let paymentMethod=await adminHelper.paymentMethods();
-      // let orderStatus=await adminHelper.OrderStatus();
-      // let FoodItemCount=await adminHelper.getFoodItemCount();
-      // let UserCount=await adminHelper.getUserCount();
-      // let profit=await adminHelper.getProfit();
-      // let delivredCount=await adminHelper.getDeliveredCount()
-      res.render('admin/dashboard',{admin:true})
+    let paymentMethod = await adminHelper.paymentMethods();
+    let orderStatus = await adminHelper.OrderStatus();
+    let FoodItemCount = await adminHelper.getFoodItemCount();
+    let UserCount = await adminHelper.getUserCount();
+    let profit = await adminHelper.getProfit();
+    let delivredCount = await adminHelper.getDeliveredCount()
+    res.render('admin/dashboard', { admin: true, UserCount, profit, orderStatus, paymentMethod, FoodItemCount, delivredCount })
   } else {
     res.render("admin/adminlogin", { loginErr: req.session.loginErr });
+    // res.render("admin/otpverification",{token:"f5b8550a-95c2-48e2-b42a-d4e43b7246a8",otp:"",mobile:"1234567890"});
     req.session.loginErr = false;
   }
 });
 
 router.post("/", (req, res) => {
-  adminHelper.doLogin(req.body).then((response) => {
-    if (response.status) {
-      req.session.adminloggedIn = true;
-      req.session.admin = response.admin;
-      res.redirect("/admin");
+  adminHelper.doLogin(req.body).then((responsem) => {
+    if (responsem.status) {
+      adminHelper.otpsent(responsem.mobile).then((response) => {
+        axios.post(fastsmsapi, {
+          "route": "otp",
+          "variables_values": `${response.otp}`,
+          "numbers": `${responsem.mobile}`
+        }, {
+          headers: {
+            'Authorization': fastsmsapikey, // Replace with your auth token
+            'Content-Type': 'application/json', // Adjust as needed
+            // Add any other headers you need
+          }
+        })
+          .then(verificationResponse => {
+
+            if (verificationResponse.data.return) {
+              // OTP verified successfully
+              console.log(responsem.mobile);
+              res.render("admin/otpverification", { token: response.token, otp: response.otp, mobile: responsem.mobile });
+            } else {
+              // OTP verification failed
+              req.session.loginErr = "OTP verification failed!";
+              res.redirect("/admin");
+            }
+          })
+          .catch(err => {
+            console.error("Error verifying OTP:", err);
+            req.session.loginErr = "Error verifying OTP!";
+            res.redirect("/admin");
+          });
+      })
     } else {
       req.session.loginErr = "Invalid Username or Password!!";
       res.redirect("/admin");
     }
   });
 });
+router.post("/otpverification", (req, res) => {
+  const { token, mobile, otp } = req.body;
+  adminHelper.verifyOTP(otp, token, mobile).then((response) => {
+    if (response) {
+      if (mobile === "9946995599") {
+        req.session.superadminloggedin = true;
+        req.session.superadmin = true
+      }
+      req.session.adminloggedIn = true;
+      req.session.admin = response.admin;
+      res.redirect("/admin");
+    } else {
+      req.session.loginErr = "Invalid OTP!!";
+      res.redirect(`/admin`);
+    }
+  }).catch(() => {
+    res.redirect("/admin");
+  })
+
+})
+
 
 router.get("/adminlogout", (req, res) => {
-  req.session.admin=null;
+  req.session.admin = null;
   req.session.adminloggedIn = false;
   res.redirect("/admin");
 });
@@ -68,20 +120,23 @@ router.get('/banner', verifyLogin, async (req, res) => {
 });
 
 router.post('/banner', (req, res) => {
-  adminHelper.addBannerDetails(req.body).then((id) => {
-      if (req.files && req.files.image) {
-          let image = req.files.image;
-          image.mv('./public/banner/' + id + '.jpg', (err) => {
-              if (err) {
-                  console.error("Error uploading image:", err);
-              }
-          });
-      } else {
-          console.log("No image uploaded");
-      }
+  adminHelper.addBannerDetails(req.body).then(async(id) => {
+    if (req.files && req.files.image) {
+      const image = req.files.image;
+     // Create a readable stream from the uploaded image
+     const fileStream = image.data;
 
-      console.log("Banner details added successfully");
-      res.redirect('/admin/banner');
+     // Upload the image to Sufy bucket with key `banner/{id}.jpg`
+     const bucketName = "windows"; // Replace with your bucket name
+     const keyName = `banner/${id}.jpg`; // Dynamic key with banner ID
+
+     await uploadImage(fileStream, bucketName, keyName);
+    } else {
+      console.log("No image uploaded");
+    }
+
+    console.log("Banner details added successfully");
+    res.redirect('/admin/banner');
   });
 });
 
@@ -89,232 +144,302 @@ router.post('/banner', (req, res) => {
 router.get('/activate-banner/:id', verifyLogin, (req, res) => {
   let bannerId = req.params.id;
   adminHelper.activateBanner(bannerId).then(() => {
-      res.redirect('/admin/banner');
+    res.redirect('/admin/banner');
   }).catch((err) => {
-      console.error("Error activating banner:", err);
-      res.redirect('/admin/banner'); // or handle error appropriately
+    console.error("Error activating banner:", err);
+    res.redirect('/admin/banner'); // or handle error appropriately
   });
 });
 
 
-router.get('/delete-banner/:id', verifyLogin, (req, res) => {
-  let bannerId = req.params.id;
-  let imagePath = './public/banner/' + bannerId + '.jpg';
+router.get("/delete-banner/:id", verifyLogin, async (req, res) => {
+  const bannerId = req.params.id;
+  const bucketName = "windows"; // Replace with your bucket name
+  const keyName = `banner/${bannerId}.jpg`; // Path to the image in the bucket
 
-  adminHelper.deleteBanner(bannerId).then(() => {
-      if (fs.existsSync(imagePath)) {
-          fs.unlinkSync(imagePath);
-          console.log("Deleted file:", imagePath);
-      } else {
-          console.log("File not found:", imagePath);
-      }
-      res.redirect('/admin/banner');
-  }).catch((err) => {
-      console.error("Error deleting banner:", err);
-      res.redirect('/admin/banner'); // or handle error appropriately
-  });
+  try {
+    // Delete the banner details from the database
+    await adminHelper.deleteBanner(bannerId);
+
+    // Delete the image from the S3 bucket
+    await deleteImage(bucketName, keyName);
+
+    console.log(`Banner ID ${bannerId} and associated image deleted successfully`);
+    res.redirect("/admin/banner");
+  } catch (err) {
+    console.error("Error deleting banner or image:", err);
+
+    // Handle the error appropriately
+    res.redirect("/admin/banner");
+  }
 });
 
 
 router.get('/edit-banner/:id', verifyLogin, async (req, res) => {
   try {
-      let bannerDetail = await adminHelper.getBannerDetails(req.params.id);
-      res.render('admin/edit-banner', { admin: true, bannerDetail });
+    let bannerDetail = await adminHelper.getBannerDetails(req.params.id);
+    res.render('admin/edit-banner', { admin: true, bannerDetail });
   } catch (err) {
-      console.error("Error fetching banner details:", err);
-      res.redirect('/admin/banner'); // or handle error appropriately
+    console.error("Error fetching banner details:", err);
+    res.redirect('/admin/banner'); // or handle error appropriately
   }
 });
 
-router.post('/edit-banner/:id', (req, res) => {
-  let bannerId = req.params.id;
 
-  adminHelper.updateBannerDetails(bannerId, req.body).then(() => {
-      if (req.files && req.files.image) {
-          let image = req.files.image;
-          let imagePath = './public/banner/' + bannerId + '.jpg';
-          
-          image.mv(imagePath, (err) => {
-              if (err) {
-                  console.error("Error uploading image:", err);
-              }
-          });
-      }
-      res.redirect('/admin/banner');
-  }).catch((err) => {
-      console.error("Error updating banner details:", err);
-      res.redirect('/admin/banner'); // or handle error appropriately
-  });
+router.post("/edit-banner/:id", async (req, res) => {
+  const bannerId = req.params.id;
+
+  try {
+    // Update banner details
+    await adminHelper.updateBannerDetails(bannerId, req.body);
+
+    // Check if image file is provided
+    if (req.files && req.files.image) {
+      const image = req.files.image;
+
+      // Create a readable stream from the uploaded image
+      const fileStream = image.data;
+
+      // S3 Bucket and Key
+      const bucketName = "windows"; // Replace with your bucket name
+      const keyName = `banner/${bannerId}.jpg`; // Dynamic key for the banner image
+
+      // Upload the image to S3
+      await uploadImage(fileStream, bucketName, keyName);
+      console.log(`Banner image for ID ${bannerId} uploaded successfully`);
+    }
+
+    // Redirect to banner page
+    res.redirect("/admin/banner");
+  } catch (err) {
+    console.error("Error updating banner details or uploading image:", err);
+
+    // Redirect back to the banner page or handle error appropriately
+    res.redirect("/admin/banner");
+  }
 });
+
+
+
 
 /**Admin Banner section End here */
 
 /**Admin About section  */
 router.get('/aboutUs', verifyLogin, async (req, res) => {
   try {
-      let aboutUsDetails = await adminHelper.getALLAboutUsDetails();
-      res.render('admin/aboutUs', { admin: true, aboutUsDetails });
+    let aboutUsDetails = await adminHelper.getALLAboutUsDetails();
+    res.render('admin/aboutUs', { admin: true, aboutUsDetails });
   } catch (err) {
-      console.error("Error fetching about us details:", err);
-      res.redirect('/admin/aboutUs'); // or handle error appropriately
+    console.error("Error fetching about us details:", err);
+    res.redirect('/admin/aboutUs'); // or handle error appropriately
   }
 });
 
 router.post('/aboutUs', (req, res) => {
-  adminHelper.addAboutUsDetails(req.body).then((id) => {
-      if (req.files && req.files.image) {
-          let image = req.files.image;
-          image.mv('./public/aboutUs/' + id + '.jpg', (err) => {
-              if (err) {
-                  console.error("Error uploading image:", err);
-              }
-          });
-      }
+  adminHelper.addBannerDetails(req.body).then(async(id) => {
+    if (req.files && req.files.image) {
+      const image = req.files.image;
+     // Create a readable stream from the uploaded image
+     const fileStream = image.data;
 
-      res.redirect('/admin/aboutUs');
+     // Upload the image to Sufy bucket with key `banner/{id}.jpg`
+     const bucketName = "windows"; // Replace with your bucket name
+     const keyName = `aboutUs/${id}.jpg`; // Dynamic key with banner ID
+
+     await uploadImage(fileStream, bucketName, keyName);
+    } else {
+      console.log("No image uploaded");
+    }
+
+    console.log("aboutUs details added successfully");
+    res.redirect('/admin/aboutUs');
   }).catch((err) => {
-      console.error("Error adding about us details:", err);
-      res.redirect('/admin/aboutUs'); // or handle error appropriately
+    console.error("Error adding about us details:", err);
+    res.redirect('/admin/aboutUs'); // or handle error appropriately
   });
-});
+  });
+
+
+ 
 
 router.get('/activate-aboutUs/:id', verifyLogin, (req, res) => {
   let aboutUsId = req.params.id;
   adminHelper.activateAboutUs(aboutUsId).then(() => {
-      res.redirect('/admin/aboutUs');
+    res.redirect('/admin/aboutUs');
   }).catch((err) => {
-      console.error("Error activating about us:", err);
-      res.redirect('/admin/aboutUs'); // or handle error appropriately
+    console.error("Error activating about us:", err);
+    res.redirect('/admin/aboutUs'); // or handle error appropriately
   });
 });
 
-router.get('/delete-aboutUs/:id', verifyLogin, (req, res) => {
-  let aboutUsId = req.params.id;
-  let imagePath = './public/aboutUs/' + aboutUsId + '.jpg';
+// Route to delete aboutUs item
+router.get("/delete-aboutUs/:id", verifyLogin, async (req, res) => {
+  const aboutUsId = req.params.id;
+  const bucketName = "windows"; // Replace with your bucket name
+  const keyName = `aboutUs/${aboutUsId}.jpg`; // Path to the image in the bucket
 
-  adminHelper.deleteAboutUs(aboutUsId).then(() => {
-      if (fs.existsSync(imagePath)) {
-          fs.unlinkSync(imagePath);
-          console.log("Deleted file:", imagePath);
-      } else {
-          console.log("File not found:", imagePath);
-      }
-      res.redirect('/admin/aboutUs');
-  }).catch((err) => {
-      console.error("Error deleting about us:", err);
-      res.redirect('/admin/aboutUs'); // or handle error appropriately
-  });
+  try {
+    // Delete the aboutUs details from the database
+    await adminHelper.deleteAboutUs(aboutUsId);
+
+    // Delete the image from the S3 bucket
+    await deleteImage(bucketName, keyName);
+
+    console.log(`AboutUs ID ${aboutUsId} and associated image deleted successfully`);
+    res.redirect("/admin/aboutUs");
+  } catch (err) {
+    console.error("Error deleting aboutUs or image:", err);
+
+    // Handle the error appropriately
+    res.redirect("/admin/aboutUs");
+  }
 });
 
 router.get('/edit-aboutUs/:id', verifyLogin, async (req, res) => {
   try {
-      let aboutUsDetail = await adminHelper.getAboutUsDetails(req.params.id);
-      res.render('admin/edit-aboutUs', { admin: true, aboutUsDetail });
+    let aboutUsDetail = await adminHelper.getAboutUsDetails(req.params.id);
+    res.render('admin/edit-aboutUs', { admin: true, aboutUsDetail });
   } catch (err) {
-      console.error("Error fetching about us details for editing:", err);
-      res.redirect('/admin/aboutUs'); // or handle error appropriately
+    console.error("Error fetching about us details for editing:", err);
+    res.redirect('/admin/aboutUs'); // or handle error appropriately
   }
 });
 
-router.post('/edit-aboutUs/:id', (req, res) => {
-  let aboutUsId = req.params.id;
+router.post("/edit-aboutUs/:id", async (req, res) => {
+  const aboutUsId = req.params.id;
 
-  adminHelper.updateAboutUsDetails(aboutUsId, req.body).then(() => {
-      if (req.files && req.files.image) {
-          let image = req.files.image;
-          let imagePath = './public/aboutUs/' + aboutUsId + '.jpg';
+  try {
+    // Update banner details
+    await adminHelper.updateAboutUsDetails(aboutUsId, req.body);
 
-          image.mv(imagePath, (err) => {
-              if (err) {
-                  console.error("Error uploading image:", err);
-              }
-          });
-      }
-      res.redirect('/admin/aboutUs');
-  }).catch((err) => {
-      console.error("Error updating about us details:", err);
-      res.redirect('/admin/aboutUs'); // or handle error appropriately
-  });
+    // Check if image file is provided
+    if (req.files && req.files.image) {
+      const image = req.files.image;
+
+      // Create a readable stream from the uploaded image
+      const fileStream = image.data;
+
+      // S3 Bucket and Key
+      const bucketName = "windows"; // Replace with your bucket name
+      const keyName = `aboutUs/${aboutUsId}.jpg`; // Dynamic key for the banner image
+
+      // Upload the image to S3
+      await uploadImage(fileStream, bucketName, keyName);
+      console.log(`aboutUs image for ID ${aboutUsId} uploaded successfully`);
+    }
+
+    // Redirect to banner page
+    res.redirect("/admin/aboutUs");
+  } catch (err) {
+    console.error("Error updating aboutUs details or uploading image:", err);
+
+    // Redirect back to the banner page or handle error appropriately
+    res.redirect("/admin/aboutUs");
+  }
 });
+
 
 /**Admin About section End here */
 
 /**Admin Branch section  */
 router.get('/branch', verifyLogin, async (req, res) => {
   try {
-      let branchDetails = await adminHelper.getALLBranchDetails();
-      res.render('admin/branch', { admin: true, branchDetails });
+    let branchDetails = await adminHelper.getALLBranchDetails();
+    res.render('admin/branch', { admin: true, branchDetails });
   } catch (err) {
-      console.error("Error fetching branch details:", err);
-      res.redirect('/admin/branch'); // or handle error appropriately
+    console.error("Error fetching branch details:", err);
+    res.redirect('/admin/branch'); // or handle error appropriately
   }
 });
 
 router.post('/branch', (req, res) => {
-  adminHelper.addBranchDetails(req.body).then((id) => {
-      if (req.files && req.files.image) {
-          let image = req.files.image;
-          image.mv('./public/branch/' + id + '.jpg', (err) => {
-              if (err) {
-                  console.error("Error uploading image:", err);
-              }
-          });
-      }
+  adminHelper.addBannerDetails(req.body).then(async(id) => {
+    if (req.files && req.files.image) {
+      const image = req.files.image;
+     // Create a readable stream from the uploaded image
+     const fileStream = image.data;
 
-      res.redirect('/admin/branch');
-  }).catch((err) => {
-      console.error("Error adding branch details:", err);
-      res.redirect('/admin/branch'); // or handle error appropriately
+     // Upload the image to Sufy bucket with key `banner/{id}.jpg`
+     const bucketName = "windows"; // Replace with your bucket name
+     const keyName = `branch/${id}.jpg`; // Dynamic key with banner ID
+
+     await uploadImage(fileStream, bucketName, keyName);
+    } else {
+      console.log("No image uploaded");
+    }
+
+    console.log("branch details added successfully");
+    res.redirect('/admin/branch');
+      }).catch((err) => {
+    console.error("Error adding branch:", err);
+    res.redirect('/admin/branch'); // or handle error appropriately
   });
 });
 
-router.get('/delete-branch/:id', verifyLogin, (req, res) => {
-  let branchId = req.params.id;
-  let imagePath = './public/branch/' + branchId + '.jpg';
+// Route to delete branch and associated image
+router.get("/delete-branch/:id", verifyLogin, async (req, res) => {
+  const branchId = req.params.id;
+  const bucketName = "windows"; // Replace with your bucket name
+  const keyName = `branch/${branchId}.jpg`; // Path to the image in the bucket
 
-  adminHelper.deleteBranch(branchId).then(() => {
-      if (fs.existsSync(imagePath)) {
-          fs.unlinkSync(imagePath);
-          console.log("Deleted file:", imagePath);
-      } else {
-          console.log("File not found:", imagePath);
-      }
-      res.redirect('/admin/branch');
-  }).catch((err) => {
-      console.error("Error deleting branch:", err);
-      res.redirect('/admin/branch'); // or handle error appropriately
-  });
+  try {
+    // Delete the branch details from the database
+    await adminHelper.deleteBranch(branchId);
+
+    // Delete the image from the S3 bucket
+    await deleteImage(bucketName, keyName);
+
+    console.log(`Branch ID ${branchId} and associated image deleted successfully`);
+    res.redirect("/admin/branch");
+  } catch (err) {
+    console.error("Error deleting branch or image:", err);
+
+    // Handle the error appropriately
+    res.redirect("/admin/branch");
+  }
 });
 
 router.get('/edit-branch/:id', verifyLogin, async (req, res) => {
   try {
-      let branchDetail = await adminHelper.getBranchDetails(req.params.id);
-      res.render('admin/edit-branch', { admin: true, branchDetail });
+    let branchDetail = await adminHelper.getBranchDetails(req.params.id);
+    res.render('admin/edit-branch', { admin: true, branchDetail });
   } catch (err) {
-      console.error("Error fetching branch details for editing:", err);
-      res.redirect('/admin/branch'); // or handle error appropriately
+    console.error("Error fetching branch details for editing:", err);
+    res.redirect('/admin/branch'); // or handle error appropriately
   }
 });
 
-router.post('/edit-branch/:id', (req, res) => {
-  let branchId = req.params.id;
+router.post("/edit-branch/:id", async (req, res) => {
+  const branchId = req.params.id;
 
-  adminHelper.updateBranchDetails(branchId, req.body).then(() => {
-      if (req.files && req.files.image) {
-          let image = req.files.image;
-          let imagePath = './public/branch/' + branchId + '.jpg';
+  try {
+    // Update banner details
+    await adminHelper.updateBranchDetails(branchId, req.body);
 
-          image.mv(imagePath, (err) => {
-              if (err) {
-                  console.error("Error uploading image:", err);
-              }
-          });
-      }
-      res.redirect('/admin/branch');
-  }).catch((err) => {
-      console.error("Error updating branch details:", err);
-      res.redirect('/admin/branch'); // or handle error appropriately
-  });
+    // Check if image file is provided
+    if (req.files && req.files.image) {
+      const image = req.files.image;
+
+      // Create a readable stream from the uploaded image
+      const fileStream = image.data;
+
+      // S3 Bucket and Key
+      const bucketName = "windows"; // Replace with your bucket name
+      const keyName = `branch/${branchId}.jpg`; // Dynamic key for the banner image
+
+      // Upload the image to S3
+      await uploadImage(fileStream, bucketName, keyName);
+      console.log(`branch image for ID ${branchId} uploaded successfully`);
+    }
+
+    // Redirect to banner page
+    res.redirect("/admin/branch");
+  } catch (err) {
+    console.error("Error updating branch details or uploading image:", err);
+
+    // Redirect back to the banner page or handle error appropriately
+    res.redirect("/admin/branch");
+  }
 });
 
 /**Admin Branch section End here */
@@ -323,230 +448,291 @@ router.post('/edit-branch/:id', (req, res) => {
 /**Admin Category section  */
 router.get('/add-category', verifyLogin, async (req, res) => {
   try {
-      let allCategory = await adminHelper.getALLCategory();
-      res.render('admin/add-category', { admin: true, allCategory });
+    let allCategory = await adminHelper.getALLCategory();
+    res.render('admin/add-category', { admin: true, allCategory });
   } catch (err) {
-      console.error("Error fetching categories:", err);
-      res.redirect('/admin/add-category'); // or handle error appropriately
+    console.error("Error fetching categories:", err);
+    res.redirect('/admin/add-category'); // or handle error appropriately
   }
 });
 
 router.post('/add-category', (req, res) => {
-  adminHelper.addCategory(req.body).then((id) => {
-      if (req.files && req.files.image) {
-          let image = req.files.image;
-          image.mv('./public/category/' + id + '.jpg', (err) => {
-              if (err) {
-                  console.error("Error uploading image:", err);
-              }
-          });
-      }
+  adminHelper.addBannerDetails(req.body).then(async(id) => {
+    if (req.files && req.files.image) {
+      const image = req.files.image;
+     // Create a readable stream from the uploaded image
+     const fileStream = image.data;
 
-      res.redirect('/admin/add-category');
-  }).catch((err) => {
-      console.error("Error adding category:", err);
-      res.redirect('/admin/add-category'); // or handle error appropriately
+     // Upload the image to Sufy bucket with key `banner/{id}.jpg`
+     const bucketName = "windows"; // Replace with your bucket name
+     const keyName = `category/${id}.jpg`; // Dynamic key with banner ID
+
+     await uploadImage(fileStream, bucketName, keyName);
+    } else {
+      console.log("No image uploaded");
+    }
+
+    console.log("category details added successfully");
+    res.redirect('/admin/category');
+      }).catch((err) => {
+    console.error("Error adding category:", err);
+    res.redirect('/admin/add-category'); // or handle error appropriately
   });
 });
-router.get('/delete-category/:id', verifyLogin, (req, res) => {
-  let categoryId = req.params.id;
-  let imagePath = './public/category/' + categoryId + '.jpg';
 
-  adminHelper.deleteCategory(categoryId).then(() => {
-      if (fs.existsSync(imagePath)) {
-          fs.unlinkSync(imagePath);
-      
-      } else {
-          console.log("File not found:", imagePath);
-      }
-      res.redirect('/admin/add-category');
-  }).catch((err) => {
-      console.error("Error deleting category:", err);
-      res.redirect('/admin/add-category'); // or handle error appropriately
-  });
+
+router.get('/delete-category/:id', verifyLogin, async (req, res) => {
+  const categoryId = req.params.id;
+  const bucketName = "windows"; // Replace with your bucket name
+  const keyName = `category/${categoryId}.jpg`; // Path to the image in the bucket
+
+  try {
+    // Delete the category from the database
+    await adminHelper.deleteCategory(categoryId);
+
+    // Delete the image from the S3 bucket
+    await deleteImage(bucketName, keyName); // Assume deleteImage function is defined
+
+    console.log(`Category ID ${categoryId} and associated image deleted successfully`);
+    res.redirect('/admin/add-category');
+  } catch (err) {
+    console.error("Error deleting category or image:", err);
+    res.redirect('/admin/add-category'); // Handle the error appropriately
+  }
 });
 
 router.get('/edit-category/:id', verifyLogin, async (req, res) => {
   try {
-      let category = await adminHelper.getCategorytDetails(req.params.id);
-      res.render('admin/edit-category', { category, admin: true });
+    let category = await adminHelper.getCategorytDetails(req.params.id);
+    res.render('admin/edit-category', { category, admin: true });
   } catch (err) {
-      console.error("Error fetching category details for editing:", err);
-      res.redirect('/admin/add-category'); // or handle error appropriately
+    console.error("Error fetching category details for editing:", err);
+    res.redirect('/admin/add-category'); // or handle error appropriately
   }
 });
 
-router.post('/edit-category/:id', (req, res) => {
-  let categoryId = req.params.id;
+router.post("/edit-category/:id", async (req, res) => {
+  const categoryId = req.params.id;
 
-  adminHelper.updateCategory(categoryId, req.body).then(() => {
-      if (req.files && req.files.image) {
-          let image = req.files.image;
-          let imagePath = './public/category/' + categoryId + '.jpg';
+  try {
+    // Update banner details
+    await adminHelper.updateCategory(categoryId, req.body);
 
-          image.mv(imagePath, (err) => {
-              if (err) {
-                  console.error("Error uploading image:", err);
-              }
-          });
-      }
-      res.redirect('/admin/add-category');
-  }).catch((err) => {
-      console.error("Error updating category:", err);
-      res.redirect('/admin/add-category'); // or handle error appropriately
-  });
+    // Check if image file is provided
+    if (req.files && req.files.image) {
+      const image = req.files.image;
+
+      // Create a readable stream from the uploaded image
+      const fileStream = image.data;
+
+      // S3 Bucket and Key
+      const bucketName = "windows"; // Replace with your bucket name
+      const keyName = `category/${categoryId}.jpg`; // Dynamic key for the banner image
+
+      // Upload the image to S3
+      await uploadImage(fileStream, bucketName, keyName);
+      console.log(`category image for ID ${categoryId} uploaded successfully`);
+    }
+
+    // Redirect to banner page
+    res.redirect("/admin/category");
+  } catch (err) {
+    console.error("Error updating category details or uploading image:", err);
+
+    // Redirect back to the banner page or handle error appropriately
+    res.redirect("/admin/category");
+  }
 });
+
 
 /**Admin Category section End  */
 
 /**Admin product section  */
-router.get('/add-product', verifyLogin, async function(req, res) {
+router.get('/add-product', verifyLogin, async function (req, res) {
   try {
-      let allCategory = await adminHelper.getALLCategory();
-      if (!allCategory) {
-          console.log("Categories not found");
-      }
-      res.render('admin/add-product', { admin: true, allCategory });
+    let allCategory = await adminHelper.getALLCategory();
+    if (!allCategory) {
+      console.log("Categories not found");
+    }
+    res.render('admin/add-product', { admin: true, allCategory });
   } catch (err) {
-      console.error("Error fetching categories:", err);
-      res.redirect('/admin/add-product'); 
+    console.error("Error fetching categories:", err);
+    res.redirect('/admin/add-product');
   }
 });
 
+router.get('/old-balance', async function (req, res) {
+  // console.log()
+  let user = req.query.id;
+  console.log(req.query.id);
+  try {
+    let oldbalance = await adminHelper.getOldBalance(user);
+    if (!oldbalance) {
+      console.log('user not found')
+      res.status(400).json({ msg: "user not found" })
+    }
+    res.json(oldbalance)
+  }
+  catch (err) {
+    res.status(400).json({ msg: 'internal server error' })
+  }
 
-router.post('/add-product', function(req, res) {
-  adminHelper.addProduct(req.body).then((id) => {
-      if (req.files) {
-          if (req.files.image1) {
-              let image1 = req.files.image1;
-              image1.mv('./public/images/' + id + 'first.jpg', (err) => {
-                  if (err) {
-                      console.error("Error uploading image 1:", err);
-                  }
-              });
-          }
-          if (req.files.image2) {
-              let image2 = req.files.image2;
-              image2.mv('./public/images/' + id + 'second.jpg', (err) => {
-                  if (err) {
-                      console.error("Error uploading image 2:", err);
-                  }
-              });
-          }
-          if (req.files.image3) {
-              let image3 = req.files.image3;
-              image3.mv('./public/images/' + id + 'third.jpg', (err) => {
-                  if (err) {
-                      console.error("Error uploading image 3:", err);
-                  }
-              });
-          }
-          if (req.files.image4) {
-              let image4 = req.files.image4;
-              image4.mv('./public/images/' + id + 'fourth.jpg', (err) => {
-                  if (err) {
-                      console.error("Error uploading image 4:", err);
-                  }
-              });
-          }
+});
+
+
+router.post("/add-product", async function (req, res) {
+  try {
+    // Add product details and get the generated ID
+    const id = await adminHelper.addProduct(req.body);
+
+    if (req.files) {
+      const bucketName = "windows"; // Replace with your bucket name
+
+      // Upload image1
+      if (req.files.image1) {
+        const image1Stream = req.files.image1.data;
+        const image1Key = `images/${id}first.jpg`; // Dynamic key for image1
+        await uploadImage(image1Stream, bucketName, image1Key);
       }
 
-      res.redirect('/admin/add-product');
-  }).catch((err) => {
-      console.error("Error adding product:", err);
-      res.redirect('/admin/add-product'); 
-  });
+      // Upload image2
+      if (req.files.image2) {
+        const image2Stream = req.files.image2.data;
+        const image2Key = `images/${id}second.jpg`; // Dynamic key for image2
+        await uploadImage(image2Stream, bucketName, image2Key);
+      }
+
+      // Upload image3
+      if (req.files.image3) {
+        const image3Stream = req.files.image3.data;
+        const image3Key = `images/${id}third.jpg`; // Dynamic key for image3
+        await uploadImage(image3Stream, bucketName, image3Key);
+      }
+
+      // Upload image4
+      if (req.files.image4) {
+        const image4Stream = req.files.image4.data;
+        const image4Key = `images/${id}fourth.jpg`; // Dynamic key for image4
+        await uploadImage(image4Stream, bucketName, image4Key);
+      }
+    }
+
+    console.log("Product and images added successfully");
+    res.redirect("/admin/add-product");
+  } catch (err) {
+    console.error("Error adding product or uploading images:", err);
+    res.status(500).send("Failed to add product or upload images");
+  }
 });
+
 
 
 router.get("/all-products", verifyLogin, async (req, res) => {
   try {
-      const products = await adminHelper.getALLProducts();
-      res.render('admin/all-products', { products, admin: true });
+    const products = await adminHelper.getALLProducts();
+    res.render('admin/all-products', { products, admin: true });
   } catch (error) {
-      console.error('Error fetching all products:', error);
-      res.redirect('/admin/all-products'); 
+    console.error('Error fetching all products:', error);
+    res.redirect('/admin/all-products');
   }
 });
 
 
-router.get('/delete-product/:id', async (req, res) => {
+router.get('/delete-product/:id', verifyLogin, async (req, res) => {
   let proId = req.params.id;
 
   try {
-      // Ensure product exists before attempting to delete
-      const product = await adminHelper.deleteProduct(proId);
-      if (!product) {
-        res.redirect('/admin/all-products'); 
+    // Delete the product from the database
+    await adminHelper.deleteProduct(proId);
+
+    // Array of image keys to delete
+    const imageKeys = [
+      `images/${proId}first.jpg`,
+      `images/${proId}second.jpg`,
+      `images/${proId}third.jpg`,
+      `images/${proId}fourth.jpg`,
+    ];
+
+    // Iterate over the image keys and delete each one
+    for (const key of imageKeys) {
+      try {
+        await deleteImage(key, 'windows'); // Replace with your bucket name
+        console.log(`Deleted image: ${key}`);
+      } catch (err) {
+        if (err.code === 'NoSuchKey') {
+          console.warn(`Image not found: ${key}`);
+        } else {
+          console.error(`Error deleting image: ${key}`, err);
+        }
       }
+    }
 
-      // Array to store unlink promises
-      const unlinkPromises = [];
-
-      // Function to asynchronously unlink files
-      async function unlinkIfExists(filePath) {
-          try {
-              await fs.unlink(filePath);
-             
-          } catch (err) {
-              if (err.code === 'ENOENT') {
-                  console.warn(`File ${filePath} not found.`);
-              } else {
-                  throw err; // Throw error if unlink fails for other reasons
-              }
-          }
-      }
-
-      // Push unlink promises for each file
-      unlinkPromises.push(unlinkIfExists(`./public/images/${proId}first.jpg`));
-      unlinkPromises.push(unlinkIfExists(`./public/images/${proId}second.jpg`));
-      unlinkPromises.push(unlinkIfExists(`./public/images/${proId}third.jpg`));
-      unlinkPromises.push(unlinkIfExists(`./public/images/${proId}fourth.jpg`));
-
-      // Wait for all unlink promises to complete
-      await Promise.all(unlinkPromises);
-
-      // After deletion, redirect to all-products page
-      res.redirect('/admin/all-products');
-  } catch (error) {
-      console.error('Error deleting product or images:', error);
-      res.redirect('/admin/all-products');
+    // Redirect to the products page
+    res.redirect('/admin/all-products');
+  } catch (err) {
+    console.error('Error deleting product or images:', err);
+    res.redirect('/admin/all-products');
   }
 });
 
-router.get('/edit-product/:id',verifyLogin,async(req,res)=>{
-  allCategory=await adminHelper.getALLCategory()
-  adminHelper.getProductDetails(req.params.id).then((product)=>{
-    res.render('admin/edit-product',{product,admin:true,allCategory});
-  })  
+
+router.get('/edit-product/:id', verifyLogin, async (req, res) => {
+  allCategory = await adminHelper.getALLCategory()
+  adminHelper.getProductDetails(req.params.id).then((product) => {
+    res.render('admin/edit-product', { product, admin: true, allCategory });
+  })
 })
 
-router.post('/edit-product/:id', (req, res) => {
-  adminHelper.updateProduct(req.params.id, req.body).then((response) => {
+router.post("/edit-product/:id", async (req, res) => {
+  try {
+    // Update product details
+    await adminHelper.updateProduct(req.params.id, req.body);
+
     if (req.files) {
+      const bucketName = "windows"; // Replace with your bucket name
+      const productId = req.params.id;
+
+      // Check and upload image1
       if (req.files.image1) {
-        let image = req.files.image1;
-        console.log("===========================")
-        image.mv('./public/images/' + req.params.id + 'first.jpg');
+        const image1Stream = req.files.image1.data;
+        const image1Key = `images/${productId}first.jpg`;
+        await uploadImage(image1Stream, bucketName, image1Key);
+        console.log("Image 1 uploaded successfully");
       }
+
+      // Check and upload image2
       if (req.files.image2) {
-        let image2 = req.files.image2;
-        image2.mv('./public/images/' + req.params.id + '  second.jpg');
+        const image2Stream = req.files.image2.data;
+        const image2Key = `images/${productId}second.jpg`;
+        await uploadImage(image2Stream, bucketName, image2Key);
+        console.log("Image 2 uploaded successfully");
       }
+
+      // Check and upload image3
       if (req.files.image3) {
-        let image3 = req.files.image3;
-        image3.mv('./public/images/' + req.params.id + 'third.jpg');
+        const image3Stream = req.files.image3.data;
+        const image3Key = `images/${productId}third.jpg`;
+        await uploadImage(image3Stream, bucketName, image3Key);
+        console.log("Image 3 uploaded successfully");
       }
+
+      // Check and upload image4
       if (req.files.image4) {
-        let image4 = req.files.image4;
-        image4.mv('./public/images/' + req.params.id + 'fourth.jpg');
+        const image4Stream = req.files.image4.data;
+        const image4Key = `images/${productId}fourth.jpg`;
+        await uploadImage(image4Stream, bucketName, image4Key);
+        console.log("Image 4 uploaded successfully");
       }
     }
-    res.redirect('/admin/all-products');
-  }).catch((err) => {
-    console.error(err);
-    res.redirect('/admin/all-products'); // Handle errors appropriately
-  });
+
+    // Redirect to the all-products page
+    res.redirect("/admin/all-products");
+  } catch (err) {
+    console.error("Error updating product or uploading images:", err);
+
+    // Redirect back to the all-products page or handle the error appropriately
+    res.redirect("/admin/all-products");
+  }
 });
 
 /**Admin Product section End */
@@ -554,22 +740,25 @@ router.post('/edit-product/:id', (req, res) => {
 
 
 /**Admin Customer section  */
-router.get("/all-customers", verifyLogin,async(req, res) => {
-  adminHelper.getALLCustomers().then((customers)=>{
-  res.render('admin/all-customers',{customers,admin:true})
-})
+router.get("/all-customers", verifyLogin, async (req, res) => {
+  adminHelper.getALLCustomers().then((customers) => {
+    res.render('admin/all-customers', { customers, admin: true })
+  })
 });
 
-router.get('/add-customer',verifyLogin,async function(req,res){
-  res.render('admin/add-customer',{admin:true})
+router.get('/add-customer', verifyLogin, async function (req, res) {
+  adminHelper.getALLBranchDetails().then((list) => {
+    console.log(list)
+    res.render('admin/add-customer', { list, admin: true })
+  })
 
 
-  router.post('/add-customer', function(req, res) {
+  router.post('/add-customer', function (req, res) {
     adminHelper.addCustomer(req.body).then((id) => {
-        res.redirect('/admin/all-customers');
+      res.redirect('/admin/all-customers');
     }).catch((err) => {
-        console.error("Error adding product:", err);
-        res.redirect('/admin/add-customer'); 
+      console.error("Error adding product:", err);
+      res.redirect('/admin/add-customer');
     });
   });
 })
@@ -579,22 +768,22 @@ router.get('/delete-customer/:id', async (req, res) => {
   let customerId = req.params.id;
 
   try {
-      // Ensure product exists before attempting to delete
-      const customer = await adminHelper.deleteCustomer(customerId);
-      if (!customer) {
-        res.redirect('/admin/all-customers'); 
-      }
+    // Ensure product exists before attempting to delete
+    const customer = await adminHelper.deleteCustomer(customerId);
+    if (!customer) {
+      res.redirect('/admin/all-customers');
+    }
 
-      res.redirect('/admin/all-customers'); 
+    res.redirect('/admin/all-customers');
   } catch (error) {
-      res.redirect('/admin/all-customers'); 
+    res.redirect('/admin/all-customers');
   }
 });
 
-router.get('/edit-customer/:id',verifyLogin,async(req,res)=>{
-  adminHelper.getCustomertDetails(req.params.id).then((customer)=>{
-    res.render('admin/edit-customer',{customer,admin:true});
-  })  
+router.get('/edit-customer/:id', verifyLogin, async (req, res) => {
+  adminHelper.getCustomertDetails(req.params.id).then((customer) => {
+    res.render('admin/edit-customer', { customer, admin: true });
+  })
 })
 
 router.post('/edit-customer/:id', (req, res) => {
@@ -610,47 +799,51 @@ router.post('/edit-customer/:id', (req, res) => {
 /**Admin Customer section End */
 
 /**Admin credit book section  */
-router.get("/all-credit-books", verifyLogin,async(req, res) => {
-  adminHelper.getALLCreditBooks().then((creditBooks)=>{
-  res.render('admin/all-credit-books',{creditBooks,admin:true})
-})
+router.get("/all-credit-books", verifyLogin, async (req, res) => {
+  adminHelper.getALLCreditBooks().then((creditBooks) => {
+    res.render('admin/all-credit-books', { creditBooks, admin: true })
+  })
 });
 
-router.get('/add-credit-book',verifyLogin,async function(req,res){
-  res.render('admin/add-credit-book',{admin:true})
-
-
-router.post('/add-credit-book', function(req, res) {
-    adminHelper.addCreditBook(req.body).then((id) => {
-        res.redirect('/admin/all-credit-books');
-    }).catch((err) => {
-        console.error("Error adding credit book:", err);
-        res.redirect('/admin/all-credit-books');
-    });
-  });
+router.get('/add-credit-book', verifyLogin, async function (req, res) {
+  adminHelper.getallEmployeeDetails().then((customers) => {
+    console.log(customers);
+    res.render('admin/add-credit-book', { customers, admin: true })
+  })
+    .catch((err) => {
+      console.log(err);
+      // res.render('admin/add',{admin:true})
+    })
 })
+router.post('/add-credit-book', function (req, res) {
+  adminHelper.addCreditBook(req.body).then(({ status }) => {
+    res.redirect(`/admin/all-credit-books/${status._id}`);
+  }).catch((err) => {
+    console.error("Error adding credit book:", err);
+    res.redirect('/admin');
+  });
+});
 
 
 router.get('/delete-credit-book/:id', async (req, res) => {
   let creditBookId = req.params.id;
 
   try {
-      // Ensure product exists before attempting to delete
-      const creditBook = await adminHelper.deleteCreditBook(creditBookId);
-      if (!creditBook) {
-        res.redirect('/admin/all-credit-books');
-      }
-
+    // Ensure product exists before attempting to delete
+    const creditBook = await adminHelper.deleteCreditBook(creditBookId);
+    if (!creditBook) {
       res.redirect('/admin/all-credit-books');
+    }
+    res.redirect('/admin/all-credit-books');
   } catch (error) {
     res.redirect('/admin/all-credit-books');
   }
 });
 
-router.get('/edit-credit-book/:id',verifyLogin,async(req,res)=>{
-  adminHelper.getCreditBookDetails(req.params.id).then((creditBook)=>{
-    res.render('admin/edit-credit-book',{creditBook,admin:true});
-  })  
+router.get('/edit-credit-book/:id', verifyLogin, async (req, res) => {
+  adminHelper.getCreditBookDetails(req.params.id).then((creditBook) => {
+    res.render('admin/edit-credit-book', { creditBook, admin: true });
+  })
 })
 
 router.post('/edit-credit-book/:id', (req, res) => {
@@ -664,22 +857,31 @@ router.post('/edit-credit-book/:id', (req, res) => {
 /**Admin credit book section End */
 
 /**Admin Dealer details section  */
-router.get("/all-dealer-details", verifyLogin,async(req, res) => {
-  adminHelper.getALLDealerDetails().then((dealerDetails)=>{
-  res.render('admin/all-dealer-details',{dealerDetails,admin:true})
-})
+router.get("/all-dealer-details", verifyLogin, async (req, res) => {
+  adminHelper.getALLDealerDetails().then((dealerDetails) => {
+    let details = []
+    dealerDetails.map((item) => {
+      details.push({ ...item, payableAmount: Number(item.totalAmount) + Number(item.oldBalance) })
+    })
+    //  const Details = {...dealerDetails , payableAmount : dealerDetails.totalAmount + dealerDetails.oldBalance}
+    console.log(details);
+
+    console.log(details);
+
+    res.render('admin/all-dealer-details', { dealerDetails: details, admin: true })
+  })
 });
 
-router.get('/add-dealer-detail',verifyLogin,async function(req,res){
-  res.render('admin/add-dealer-detail',{admin:true})
+router.get('/add-dealer-detail', verifyLogin, async function (req, res) {
+  res.render('admin/add-dealer-detail', { admin: true })
 
 
-router.post('/add-dealer-detail', function(req, res) {
+  router.post('/add-dealer-detail', function (req, res) {
     adminHelper.addDealerDetail(req.body).then((id) => {
-        res.redirect('/admin/all-dealer-details');
+      res.redirect('/admin/all-dealer-details');
     }).catch((err) => {
-        console.error("Error adding dealer details:", err);
-        res.redirect('/admin/all-dealer-details');
+      console.error("Error adding dealer details:", err);
+      res.redirect('/admin/all-dealer-details');
     });
   });
 })
@@ -689,25 +891,26 @@ router.get('/delete-dealer-details/:id', async (req, res) => {
   let dealerDetailsId = req.params.id;
 
   try {
-      // Ensure product exists before attempting to delete
-      const dealerDetail = await adminHelper.deleteDealerDetail(dealerDetailsId);
-      if (!creditBook) {
-        res.redirect('/admin/all-dealer-details');
-      }
-
+    // Ensure product exists before attempting to delete
+    const dealerDetail = await adminHelper.deleteDealerDetail(dealerDetailsId);
+    if (!creditBook) {
       res.redirect('/admin/all-dealer-details');
+    }
+
+    res.redirect('/admin/all-dealer-details');
   } catch (error) {
     res.redirect('/admin/all-dealer-details');
   }
 });
 
-router.get('/edit-dealer-detail/:id',verifyLogin,async(req,res)=>{
-  adminHelper.getDealerDetail(req.params.id).then((dealerDetail)=>{
-    res.render('admin/edit-dealer-detail',{dealerDetail,admin:true});
-  })  
+router.get('/edit-dealer-detail/:id', verifyLogin, async (req, res) => {
+  adminHelper.getDealerDetail(req.params.id).then((dealerDetail) => {
+    res.render('admin/edit-dealer-detail', { dealerDetail, admin: true });
+  })
 })
 
 router.post('/edit-dealer-detail/:id', (req, res) => {
+  console.log(req.body)
   adminHelper.updateDealerDetail(req.params.id, req.body).then((response) => {
     res.redirect('/admin/all-dealer-details')
   }).catch((err) => {
@@ -718,22 +921,30 @@ router.post('/edit-dealer-detail/:id', (req, res) => {
 /**Admin Dealer section End */
 
 /**Admin monthly square feet details section  */
-router.get("/all-monthly-square-feet", verifyLogin,async(req, res) => {
-  adminHelper.getALLMonthlySquareFeet().then((monthlySquareFeet)=>{
-  res.render('admin/all-monthly-square-feet',{monthlySquareFeet,admin:true})
-})
+router.get("/all-monthly-square-feet", verifyLogin, async (req, res) => {
+  adminHelper.getALLMonthlySquareFeet().then((monthlySquareFeet) => {
+    res.render('admin/all-monthly-square-feet', { monthlySquareFeet, admin: true })
+  })
+});
+router.get("/all-monthly-square-feet/:type", verifyLogin, async (req, res) => {
+  const type = req.params.type
+  adminHelper.getSingleMonthlySquareFeet(type).then((monthlySquareFeet) => {
+    console.log(monthlySquareFeet);
+
+    res.render('admin/all-monthly-square-feet', { monthlySquareFeet, admin: true })
+  })
 });
 
-router.get('/add-monthly-square-feet',verifyLogin,async function(req,res){
-  res.render('admin/add-monthly-square-feet',{admin:true})
+router.get('/add-monthly-square-feet', verifyLogin, async function (req, res) {
+  res.render('admin/add-monthly-square-feet', { admin: true })
 
 
-router.post('/add-monthly-square-feet', function(req, res) {
+  router.post('/add-monthly-square-feet', function (req, res) {
     adminHelper.addMonthlySquareFeet(req.body).then((id) => {
-        res.redirect('/admin/all-monthly-square-feet');
+      res.redirect('/admin/all-monthly-square-feet');
     }).catch((err) => {
-        console.error("Error adding Monthly Square Feet:", err);
-        res.redirect('/admin/all-monthly-square-feet');
+      console.error("Error adding Monthly Square Feet:", err);
+      res.redirect('/admin/all-monthly-square-feet');
     });
   });
 })
@@ -743,27 +954,31 @@ router.get('/delete-monthly-square-feet/:id', async (req, res) => {
   let monthlySquareFeetId = req.params.id;
 
   try {
-      // Ensure product exists before attempting to delete
-      const dealerDetail = await adminHelper.deleteMonthlySquareFeet(monthlySquareFeetId);
-      if (!dealerDetail) {
-        res.redirect('/admin/all-monthly-square-feet');
-      }
-
+    // Ensure product exists before attempting to delete
+    const dealerDetail = await adminHelper.deleteMonthlySquareFeet(monthlySquareFeetId);
+    if (!dealerDetail) {
       res.redirect('/admin/all-monthly-square-feet');
+    }
+
+    res.redirect('/admin/all-monthly-square-feet');
   } catch (error) {
     res.redirect('/admin/all-monthly-square-feet');
   }
 });
 
-router.get('/edit-monthly-square-feet/:id',verifyLogin,async(req,res)=>{
-  adminHelper.getMonthlySquareFeet(req.params.id).then((monthlySquareFeet)=>{
-    res.render('admin/edit-monthly-square-feet',{monthlySquareFeet,admin:true});
-  })  
+router.get('/edit-monthly-square-feet/:id', verifyLogin, async (req, res) => {
+  adminHelper.getMonthlySquareFeet(req.params.id).then((monthlySquareFeet) => {
+    res.render('admin/edit-monthly-square-feet', { monthlySquareFeet, admin: true });
+  })
 })
 
 router.post('/edit-monthly-square-feet/:id', (req, res) => {
   adminHelper.updateMonthlySquareFeet(req.params.id, req.body).then((response) => {
-    res.redirect('/admin/all-monthly-square-feet');
+    const type = req.body.productType
+    console.log(req.body);
+
+    if (type === "Windows") res.redirect('/admin/all-monthly-square-feet/Windows');
+    else res.redirect('/admin/all-monthly-square-feet/JD');
   }).catch((err) => {
     console.error(err);
     res.redirect('/admin/all-monthly-square-feet');
@@ -772,108 +987,336 @@ router.post('/edit-monthly-square-feet/:id', (req, res) => {
 /**Admin monthly square feet section End */
 
 /**Admin Contacted section Start */
-router.get("/all-contacts", verifyLogin,async(req, res) => {
-  adminHelper.getALLContacts().then((contacts)=>{
-  res.render('admin/all-contacts',{contacts,admin:true})
-})
+router.get("/all-contacts", verifyLogin, async (req, res) => {
+  adminHelper.getALLContacts().then((contacts) => {
+    res.render('admin/all-contacts', { contacts, admin: true })
+  })
 });
 
 router.get('/delete-contact/:id', async (req, res) => {
   let contactId = req.params.id;
 
   try {
-      // Ensure product exists before attempting to delete
-      const contact = await adminHelper.deleteContact(contactId);
-      if (!contact) {
-        res.redirect('/admin/all-contacts'); 
-      }
+    // Ensure product exists before attempting to delete
+    const contact = await adminHelper.deleteContact(contactId);
+    if (!contact) {
+      res.redirect('/admin/all-contacts');
+    }
 
-      res.redirect('/admin/all-contacts'); 
+    res.redirect('/admin/all-contacts');
   } catch (error) {
-    res.redirect('/admin/all-contacts'); 
+    res.redirect('/admin/all-contacts');
   }
 });
 
 /**Admin Contacted section End */
 
 /**Admin Cart section Start */
-router.get('/view-carts',verifyLogin,async(req,res)=>{
-  carts=await adminHelper.getALLCarts()
-  res.render('admin/view-carts',{carts,admin:true})
+router.get('/view-carts', verifyLogin, async (req, res) => {
+  carts = await adminHelper.getALLCarts()
+  res.render('admin/view-carts', { carts, admin: true })
 })
-router.get('/view-cart-items/:id',verifyLogin,async(req,res)=>{
-  cartProductDetails=await adminHelper.getOrderproduct(req.params.id);
-  res.render('admin/view-cart-items',{admin:true,cartProductDetails})
+router.get('/view-cart-items/:id', verifyLogin, async (req, res) => {
+  cartProductDetails = await adminHelper.getOrderproduct(req.params.id);
+  res.render('admin/view-cart-items', { admin: true, cartProductDetails })
 })
 
 router.get('/delete-product-cart/:id', verifyLogin, (req, res) => {
   let cartId = req.params.id;
   adminHelper.deleteCart(orderId).then(() => {
-      res.redirect('/admin/view-carts');
+    res.redirect('/admin/view-carts');
   }).catch((err) => {
-      console.error("Error deleting orders:", err);
-      res.redirect('/admin/view-carts'); // or handle error appropriately
+    console.error("Error deleting orders:", err);
+    res.redirect('/admin/view-carts'); // or handle error appropriately
   });
 });
 /**Admin Cart section End */
 
 //====================================================================================================
 
-router.get('/users-list',verifyLogin,async(req,res)=>{
-  userlist=await adminHelper.getALLusers()
-  res.render('admin/users-list',{userlist,admin:true})
+router.get('/users-list', verifyLogin, async (req, res) => {
+  userlist = await adminHelper.getALLusers()
+  res.render('admin/users-list', { userlist, admin: true })
 })
 
-router.get('/delete-user/:id',(req,res)=>{
-  let userId=req.params.id
+router.get('/delete-user/:id', verifyLogin, async (req, res) => {
+  let userId = req.params.id;
 
-  adminHelper.deleteUser(userId).then((response)=>{
-    const pathToFile = './public/profile/'+userId+'.jpg'
-    if (fs.existsSync(pathToFile)) {
-    fs.unlink(pathToFile, function (err) {
-      if (err) {
-        throw err;
+  try {
+    // Delete user from the database
+    await adminHelper.deleteUser(userId);
+
+    const imageKey = `profile/${userId}.jpg`; // Image key to be deleted
+
+    // Delete the user's profile image from the S3 bucket
+    try {
+      await deleteImage(imageKey, 'windows'); // Replace with your actual bucket name
+      console.log(`Successfully deleted image: ${imageKey}`);
+    } catch (err) {
+      if (err.code === 'NoSuchKey') {
+        console.warn(`Image not found: ${imageKey}`);
       } else {
-        console.log("Successfully deleted the file.");
+        console.error(`Error deleting image: ${imageKey}`, err);
       }
-    });
-    res.redirect('/admin/users-list')
-  }else{
-    res.redirect('/admin/users-list')
+    }
+
+    // Redirect to the users list page
+    res.redirect('/admin/users-list');
+  } catch (err) {
+    console.error('Error deleting user or image:', err);
+    res.redirect('/admin/users-list');
   }
-  })
-})
+});
 
-router.get('/block-user/:id',(req,res)=>{
-  userId=req.params.id
-  adminHelper.blockUser(userId).then(()=>{
+
+router.get('/block-user/:id', (req, res) => {
+  userId = req.params.id
+  adminHelper.blockUser(userId).then(() => {
     res.redirect('/admin/users-list')
   })
 })
-router.get('/unblock-user/:id',(req,res)=>{
-  userId=req.params.id
-  adminHelper.unblockUser(userId).then(()=>{
+router.get('/unblock-user/:id', (req, res) => {
+  userId = req.params.id
+  adminHelper.unblockUser(userId).then(() => {
     res.redirect('/admin/users-list')
   })
 })
 
-router.get('/view-orders',verifyLogin,async(req,res)=>{
-  orders=await adminHelper.getALLOrders()
-  res.render('admin/view-orders',{orders,admin:true})
+router.get('/view-orders', verifyLogin, async (req, res) => {
+  orders = await adminHelper.getALLOrders()
+  res.render('admin/view-orders', { orders, admin: true })
 })
-router.get('/view-order-items/:id',verifyLogin,async(req,res)=>{
-  orderProductDetails=await adminHelper.getOrderproduct(req.params.id);
-  res.render('admin/view-order-items',{admin:true,orderProductDetails})
+router.get('/view-order-items/:id', verifyLogin, async (req, res) => {
+  orderProductDetails = await adminHelper.getOrderproduct(req.params.id);
+  res.render('admin/view-order-items', { admin: true, orderProductDetails })
 })
 
 router.get('/delete-order/:id', verifyLogin, (req, res) => {
   let orderId = req.params.id;
   adminHelper.deleteOrder(orderId).then(() => {
-      res.redirect('/admin/view-orders');
+    res.redirect('/admin/view-orders');
   }).catch((err) => {
-      console.error("Error deleting orders:", err);
-      res.redirect('/admin/view-orders'); // or handle error appropriately
+    console.error("Error deleting orders:", err);
+    res.redirect('/admin/view-orders'); // or handle error appropriately
   });
 });
+
+
+router.get('/employe', verifyLogin, (req, res) => {
+  console.log(req.session.superadminloggedin ?? false);
+  adminHelper.getallEmployeeDetails().then((creditBooks) => {
+    res.render('admin/all-employee', { creditBooks, admin: true, superadmin: req.session.superadminloggedin ?? false })
+  })
+})
+
+router.get('/employe/:id', verifyLogin, (req, res) => {
+  let employeeId = req.params.id;
+  adminHelper.getIndividualEmployessDetails(employeeId).then((employee) => {
+    res.render('admin/edit-employee', { employee, admin: true })
+  })
+})
+
+router.post('/edit-employee/:id', verifyLogin, (req, res) => {
+  let employeeId = req.params.id;
+  let employee = req.body;
+  adminHelper.updateEmployeeDetails(employeeId, employee).then(() => {
+    res.redirect('/admin/employe')
+  })
+})
+
+router.get('/delete-employee/:id', verifyLogin, (req, res) => {
+  let employeeId = req.params.id;
+
+  adminHelper.deleteEmployeeDetails(employeeId).then(() => {
+    res.redirect('/admin/employe')
+  }).catch((err) => {
+    console.log("employee");
+    res.redirect('/admin/employe')
+  })
+})
+
+router.get('/all-credit-books/:id', verifyLogin, (req, res) => {
+  let orderId = req.params.id;
+  console.log(orderId);
+  adminHelper.getHistoryCreditCard(orderId).then((creditBook) => {
+    console.log(creditBook);
+    res.render('admin/all-individualcredit', { creditBook, admin: true });
+  }).catch((err) => {
+    console.error(err);
+    res.status(500).send('Server Error');
+  });
+});
+router.get('/add-employee', verifyLogin, (req, res) => {
+  res.render('admin/add-employee', { admin: true });
+})
+
+router.post('/add-employee', verifyLogin, (req, res) => {
+  adminHelper.addEmployeeDetails(req.body)
+    .then((result) => {
+      res.redirect('/admin/employe');
+    })
+    .catch((err) => {
+      console.error(err);
+      res.status(500).send('Server Error');
+    });
+})
+
+router.get('/all-monthly-feet/:id', verifyLogin, (req, res) => {
+  const id = req.params.id;
+  adminHelper.getMonthlyClothFeet(id)
+    .then((data) => {
+      res.render('admin/all-cloth-monthly', { data, type: id, admin: true });
+    })
+    .catch((err) => {
+      console.error(err);
+      res.status(500).send('Server Error');
+    });
+});
+
+router.post('/add-monthly-feet/:type', verifyLogin, (req, res) => {
+  const type = req.params.type;
+  const data = { ...req.body, type };
+
+  adminHelper.addMothlyClothFeet(data)
+    .then(() => {
+      res.redirect(`/admin/all-monthly-feet/${type}`);
+    })
+    .catch((err) => {
+      console.error(err);
+      res.status(500).send('Server Error');
+    });
+});
+
+router.get('/add-monthly-feet/:type', verifyLogin, (req, res) => {
+  const type = req.params.type;
+  if (type === "JD") {
+    res.render('admin/add-cloth-JD-monthly', { admin: true });
+  } else if (type === "Windows") {
+    res.render('admin/add-cloth-Windows-monthly', { admin: true });
+  } else {
+    res.status(404).send('Page not found');
+  }
+});
+
+router.get('/edit-monthly-feet/:id', verifyLogin, (req, res) => {
+  const id = req.params.id;
+  adminHelper.getIndividualClothFeet(id).then((resp) => {
+    res.render('admin/edit-cloth-monthly', { data: resp, admin: true });
+  })
+});
+
+router.post('/edit-monthly-feet/:id', verifyLogin, (req, res) => {
+  const id = req.params.id;
+  const data = { ...req.body };
+  adminHelper.updateClothFeet(id, data).then((response) => {
+    res.redirect(`/admin/all-monthly-feet/${response.type}`);
+  })
+    .catch((err) => {
+      console.error(err);
+      res.status(500).send('Server Error');
+    });
+});
+
+router.get('/delete-monthly-feet/:id/:type', verifyLogin, (req, res) => {
+  const id = req.params.id;
+  const type = req.params.type;
+  adminHelper.getDeleteClothFeet(id).then(() => {
+    res.redirect(`/admin/all-monthly-feet/${type}`);
+  }).catch((err) => {
+    console.error(err);
+    res.status(500).send('Server Error');
+  })
+})
+
+router.post('/blogDetails', verifyLogin, (req, res) => {
+  adminHelper.addBlogUsDetails(req.body).then(async(id) => {
+    if (req.files && req.files.image) {
+      const image = req.files.image;
+     // Create a readable stream from the uploaded image
+     const fileStream = image.data;
+
+     // Upload the image to Sufy bucket with key `banner/{id}.jpg`
+     const bucketName = "windows"; // Replace with your bucket name
+     const keyName = `blog/${id}.jpg`; // Dynamic key with banner ID
+
+     await uploadImage(fileStream, bucketName, keyName);
+    } else {
+      console.log("No image uploaded");
+    }
+
+    console.log("blog details added successfully");
+    res.redirect('/admin/blog');
+  });
+});
+
+
+router.get('/blogDetails', verifyLogin, (req, res) => {
+  adminHelper.getBlogDetails().then((response) => {
+    res.render('admin/blogPage', { blogDetails: response, admin: true });
+  }).catch((err) => {
+    console.error("Error getting blog details:", err);
+    res.redirect('/admin'); // or handle error appropriately
+  });
+});
+
+router.get('/blogDetails/:id', verifyLogin, (req, res) => {
+  const id = req.params.id;
+  adminHelper.getindividualBlogDetails(id).then((response) => {
+    console.log(response);
+    res.render('admin/edit-blogdetails', { blogDetails: response, admin: true })
+  }).catch((err) => {
+    console.error("Error getting blog details:", err);
+    res.redirect('/admin'); // or handle error appropriately
+  })
+});
+
+router.post("/blogDetails/:id", verifyLogin, async (req, res) => {
+  const id = req.params.id;
+  const data = req.body;
+
+  try {
+    // Update blog details in the database
+    await adminHelper.updateBlogDetails(id, data);
+
+    // Check if an image file is provided
+    if (req.files && req.files.image) {
+      const image = req.files.image;
+
+      // Create a readable stream from the uploaded image
+      const fileStream = image.data;
+
+      // S3 Bucket and Key
+      const bucketName = "windows"; // Replace with your bucket name
+      const keyName = `blog/${id}.jpg`; // Store the image in the "blog/" directory with dynamic ID
+
+      // Upload the image to S3
+      await uploadImage(fileStream, bucketName, keyName);
+      console.log(`Blog image for ID ${id} uploaded successfully`);
+    }
+
+    // Redirect to the blog details page
+    res.redirect("/admin/blogDetails");
+  } catch (err) {
+    console.error("Error updating blog details or uploading image:", err);
+
+    // Redirect to the admin page or handle the error appropriately
+    res.redirect("/admin");
+  }
+});
+
+router.get('/blogDetails-delete/:id', verifyLogin, (req, res) => {
+  const id = req.params.id;
+  adminHelper.deleteBlogDetails(id).then((response) => {
+    res.redirect('/admin/blogDetails')
+  })
+    .catch((err) => {
+      console.error("Error getting blog details:", err);
+      res.redirect('/admin'); // or handle error appropriately
+    })
+});
+
+
+
+
 
 module.exports = router;

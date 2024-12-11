@@ -1,0 +1,55 @@
+<div id="main">
+    <div class="page-heading">
+        <div class="page-title">
+            <div class="row">
+                <div class="col-12 col-md-6 order-md-1 order-last">
+                    <h3>ALL {{type}} Monthly Square Feet Details</h3>
+                </div>
+                <div class="col-12 col-md-6 order-md-1 order-last buttons">
+                    <a class="btn btn-primary float-md-end" href="/admin/add-monthly-feet/{{type}}">Add {{type}} Monthly Square Feet</a>
+                </div>
+            </div>
+        </div>
+        <section class="section">
+            <div class="card">
+                <div class="card-header">
+                    <!--write some eding here -->
+                </div>
+                <div class="card-body">
+
+                    <table class="table" id="table1">
+                        <thead>
+                            <tr>
+                                <th>Cloth Name</th>
+                                <th>Roman</th>
+                                <th>Cloth</th>
+                                <th colspan="2">Options</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{#each data}}
+                            <tr>
+                                <td>{{this.clothname}}</td>
+                                <td>{{this.roman}}</td>
+                                <td>{{this.cloth}}</td>
+                                
+                                {{!-- button for option --}}
+                                 <td class="buttons">
+                                    <a href="/admin/edit-monthly-feet/{{this._id}}"
+                                        class=" btn btn-primary d-flex justify-content-center"
+                                        style="width: 150px;">Edit</a>
+                                    <a href="/admin/delete-monthly-feet/{{this._id}}/{{type}}"
+                                        class=" btn btn-danger d-flex justify-content-center"
+                                        onclick="deleteProduct(event)" style="width: 150px;">Delete</a>
+                                </td>
+                            </tr>
+                            {{/each}}
+                        </tbody>
+                    </table>
+
+                </div>
+            </div>
+
+        </section>
+    </div>
+</div>

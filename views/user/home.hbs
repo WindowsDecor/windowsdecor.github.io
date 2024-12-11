@@ -3,7 +3,7 @@
   {{#each banners}}
   {{#if this.status}}
   <section class="hero pb-3 bg-cover bg-center d-flex align-items-center"
-    style="background: url(/banner/{{this._id}}.jpg">
+    style="background: url(https://windows.mos.ap-southeast-2.sufybkt.com/banner/{{this._id}}.jpg">
     <div class="container py-5">
       <div class="row px-4 px-lg-5">
         <div class="col-lg-6">
@@ -30,7 +30,7 @@
       {{#each allCategory}}
       <div class="col-xl-3 col-lg-4 col-sm-6">
         <a class="category-item mb-4" href="/products-details-category/{{this.categoryName}}">
-          <img class="img-fluid" src="/category/{{this._id}}.jpg" alt="">
+          <img class="img-fluid" src="https://windows.mos.ap-southeast-2.sufybkt.com/category/{{this._id}}.jpg" alt="">
           <strong class="category-item-title">{{this.categoryName}}</strong>
         </a>
       </div>
@@ -54,12 +54,12 @@
       <div class="row">
         <!-- PRODUCT-->
         {{#each product}}
-        <div class="col-xl-3 col-lg-4 col-sm-6">
+        <div class="col-xl-3 col-lg-4 col-sm-6 mt-5">
           <div class="product text-center">
             <div class="position-relative mb-3">
               <div class="badge text-white badge-"></div><a class="d-block"
                 href="/view-single-product/{{this._id}}"><img class="img-fluid w-100"
-                  src="/images/{{this._id}}first.jpg" alt="..."></a>
+                  src="https://windows.mos.ap-southeast-2.sufybkt.com/images/{{this._id}}first.jpg" alt="..."></a>
               <div class="product-overlay">
                 <ul class="mb-0 list-inline">
                  
@@ -71,8 +71,9 @@
               </div>
             </div>
             <h6> <a class="reset-anchor" href="#">{{this.name}}</a></h6>
-            <p class="small text-muted">Original Price: ₹{{this.price2}}</p>
-            <p class="small text-muted">Offer: {{this.offer}} , Discount Price: ₹{{this.price}}</p>
+            <p class="small text-muted my-0">Original Price: ₹<strike>{{this.price2}}</strike></p>
+            <p class="small text-muted my-0">Offer: {{this.offer}}%</p>
+            <p class="small text-muted my-0 text-danger">Discount Price: ₹{{this.price}}</p>
           </div>
         </div>
         {{/each}}

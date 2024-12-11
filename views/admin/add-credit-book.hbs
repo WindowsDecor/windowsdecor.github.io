@@ -1,4 +1,21 @@
 <section id="main">
+    <script>
+        function handelcustomerChange(event){
+            const user_id = event.target.value
+             $.ajax({
+      url:'/admin/old-balance',
+      data:{
+            id:user_id
+      },
+      method:'get',
+     success:(response)=>{
+          if(response){
+               document.getElementById('oldbalance').value = response
+          }
+        }
+        })
+        }
+    </script>
     <div class="page-heading">
         <div class="page-title">
             <div class="row">
@@ -22,7 +39,13 @@
                                         <div class="col-md-6 col-12">
                                             <div class="form-group">
                                                 <label for="">Staff Name</label>
-                                                <input type="text" class="form-control" id="" name="staffName" required />
+                                                {{!-- <input type="text" class="form-control" id="" name="staffName" required /> --}}
+                                                <select name="staffname" class="form-control" onchange="handelcustomerChange(event)" >
+                                                    <option selected disabled>Select</option>
+                                                    {{#each customers}}
+                                                    <option value={{this._id}} class="form-control w-100">{{this.name}}</option>
+                                                    {{/each}}
+                                                </select>
                                             </div>
                                         </div>
                                         <div class="col-md-6 col-12">
@@ -31,19 +54,24 @@
                                                 <input type="date" class="form-control" id="" name="date" required />
                                             </div>
                                         </div>
-                                         <div class="col-md-6 col-12">
+                                         <div class="col-md-4 col-12">
                                             <div class="form-group">
-                                                <label for="">Current Amount</label>
-                                                <input type="number" class="form-control" id="" name="currentAmount" required />
+                                                <label for="">Debited Amount</label>
+                                                <input type="number" class="form-control" id="" name="debitAmount" value="0" required />
                                             </div>
                                         </div>
-                                        <div class="col-md-6 col-12">
+                                        <div class="col-md-4 col-12">
                                             <div class="form-group">
-                                                <label for="">Balance Amount:</label>
-                                                <input type="number" class="form-control" id="" name="balanceAmount" required />
+                                                <label for="">Credited Amount:</label>
+                                                <input type="number" class="form-control" id="" name="creditAmount" value="0" required />
                                             </div>
                                         </div>
-
+                                         <div class="col-md-4 col-12">
+                                            <div class="form-group">
+                                                <label for="">old Balance </label>
+                                                <input type="number" class="form-control" id="oldbalance" name="oldbalance"  disabled required />
+                                            </div>
+                                        </div>
                                         <div class="form-group">
                                             <label for="">Party Name</label>
                                             <input type="text" class="form-control" id="" name="partyName"  />

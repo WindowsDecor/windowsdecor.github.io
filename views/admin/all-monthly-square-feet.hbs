@@ -20,8 +20,9 @@
                     <table class="table" id="table1">
                         <thead>
                             <tr>
-                                <th>Product</th>
-                                <th>Product Type </th>
+                                <th>Item</th>
+                                <th>Windows</th>
+                                <th>JD</th>
                                 <th>Total</th>
                                 <th>Month Year</th>
                                 <th colspan="2">Options</th>
@@ -31,7 +32,9 @@
                             {{#each monthlySquareFeet}}
                             <tr>
                                 <td>{{this.product}}</td>
-                                <td>{{this.productType}}</td>
+                                {{!-- <td>{{this.productType}}</td> --}}
+                                <td>{{this.WinAmount}}</td>
+                                <td>{{this.JdAmount}}</td>
                                 <td>{{this.total}}</td>
                                 <td>{{this.monthYear}}</td>
 

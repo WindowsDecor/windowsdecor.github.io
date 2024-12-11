@@ -1,7 +1,7 @@
 <script>
-    function viewImg(event) {
-        document.getElementById("imgView").src =
-        URL.createObjectURL(event.target.files[0]);
+    function viewImg(event,idname) {
+        document.getElementById(idname).src =
+            URL.createObjectURL(event.target.files[0]);
     }
 </script>
 
@@ -29,11 +29,11 @@
                                             <option value="{{product.category}}">{{product.category}}
                                             </option>
                                             {{#each allCategory}}
-                                                <option value="{{this.categoryName}}">{{this.categoryName}}</option>
+                                            <option value="{{this.categoryName}}">{{this.categoryName}}</option>
                                             {{/each}}
                                         </select>
                                     </div>
-                                      <div class="form-group">
+                                    <div class="form-group">
                                         <label for="">Brand</label>
                                         <input type="text" class="form-control" id="" name="brand"
                                             value="{{product.brand}}" />
@@ -45,83 +45,98 @@
                                     </div>
                                     <div class="form-group">
                                         <label for="">Original Price</label>
-                                        <input type="number" class="form-control" id="" name="price2"
-                                            value="{{product.price2}}" />
+                                        <input type="number" class="form-control" id="price2" name="price2"
+                                            value="{{product.price2}}" oninput="calculateDiscount()" />
                                     </div>
-                            
-                                      <div class="form-group">
+
+                                    <div class="form-group">
                                         <label for="">Offer</label>
-                                        <input type="number" class="form-control" id="" name="offer"
-                                            value="{{product.offer}}" />
+                                        <input type="number" class="form-control" id="offer" name="offer"
+                                            value="{{product.offer}}" oninput="calculateDiscount()" />
                                     </div>
-                                      <div class="form-group">
+                                    <div class="form-group">
                                         <label for="">Discount price</label>
-                                        <input type="number" class="form-control" id="" name="price"
-                                            value="{{product.price}}" />
+                                        <input type="number" class="form-control" name="price" id="discountAmount"
+                                            value="{{product.price}}"  readonly required />
                                     </div>
-                                      <div class="form-group">
+                                    <div class="form-group">
                                         <label for="">Product size(optional)</label>
                                         <input type="text" class="form-control" id="" name="size"
                                             value="{{product.size}}" />
                                     </div>
-                                      </div>
-                                      <div class="form-group">
-                                        <label for="">colour(optional)</label>
-                                        <input type="text" class="form-control" id="" name="colour"
-                                            value="{{product.colour}}" />
-                                    </div>
-                                     <div class="form-group">
-                                        <label for="">Product design (optional)</label>
-                                        <input type="text" class="form-control" id="" name="design"
-                                            value="{{product.design}}" />
-                                    </div>
-                                    
-                                       <div>
-                                        <img src="/images/{{product._id}}first.jpg" style="width: 200px;height: 200px;"
-                                            alt="" id="imgView" />
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="">Image1</label>
-                                        <input type="file" class="form-control-file" id="" name="image1"
-                                            onchange="viewImg(event)" />
-                                    </div>
-                                      <div>
-                                        <img src="/images/{{product._id}}second.jpg" style="width: 200px;height: 200px;"
-                                            alt="" id="imgView2" />
-                                    </div>
-                                     <div class="form-group">
-                                        <label for="">Image2</label>
-                                        <input type="file" class="form-control-file" id="" name="image2"
-                                            onchange="viewImg2(event)" />
-                                    </div>
-                                      <div>
-                                        <img src="/images/{{product._id}}third.jpg" style="width: 200px;height: 200px;"
-                                            alt="" id="imgView3" />
-                                    </div>
-                                     <div class="form-group">
-                                        <label for="">Image3</label>
-                                        <input type="file" class="form-control-file" id="" name="image3"
-                                            onchange="viewImg3(event)" />
-                                    </div>
-                                      <div>
-                                        <img src="/images/{{product._id}}fourth.jpg" style="width: 200px;height: 200px;"
-                                            alt="" id="imgView4" />
-                                    </div>
-                                     <div class="form-group">
-                                        <label for="">Image4</label>
-                                        <input type="file" class="form-control-file" id="" name="image4"
-                                            onchange="viewImg4(event)" />
-                                    </div>
-                                    <div class="form-group">
-                                        <button type="submit" class="btn btn-primary">Submit</button>
-                                    </div>
-
                                 </div>
-                            </form>
+                                <div class="form-group">
+                                    <label for="">colour(optional)</label>
+                                    <input type="text" class="form-control" id="" name="colour"
+                                        value="{{product.colour}}" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="">Product design (optional)</label>
+                                    <input type="text" class="form-control" id="" name="design"
+                                        value="{{product.design}}" />
+                                </div>
+
+                                <div>
+                                    <img src="https://windows.mos.ap-southeast-2.sufybkt.com/images/{{product._id}}first.jpg" style="width: 200px;height: 200px;"
+                                        alt="" id="imgView" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="">Image1</label>
+                                    <input type="file" class="form-control-file" id="" name="image1"
+                                        onchange="viewImg(event,'imgView')" />
+                                </div>
+                                <div>
+                                    <img src="https://windows.mos.ap-southeast-2.sufybkt.com/images/{{product._id}}second.jpg" style="width: 200px;height: 200px;"
+                                        alt="" id="imgView2" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="">Image2</label>
+                                    <input type="file" class="form-control-file" id="" name="image2"
+                                        onchange="viewImg(event,'imgView2')" />
+                                </div>
+                                <div>
+                                    <img src="https://windows.mos.ap-southeast-2.sufybkt.com/images/{{product._id}}third.jpg" style="width: 200px;height: 200px;"
+                                        alt="" id="imgView3" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="">Image3</label>
+                                    <input type="file" class="form-control-file" id="" name="image3"
+                                        onchange="viewImg(event,'imgView3')" />
+                                </div>
+                                <div>
+                                    <img src="https://windows.mos.ap-southeast-2.sufybkt.com/images/{{product._id}}fourth.jpg" style="width: 200px;height: 200px;"
+                                        alt="" id="imgView4" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="">Image4</label>
+                                    <input type="file" class="form-control-file" id="" name="image4"
+                                        onchange="viewImg(event,'imgView4')" />
+                                </div>
+                                <div class="form-group">
+                                    <button type="submit" class="btn btn-primary">Submit</button>
+                                </div>
+
                         </div>
+                        </form>
                     </div>
                 </div>
             </div>
         </div>
-    </section>
 </div>
+</section>
+</div>
+<script>
+    function calculateDiscount() {
+        console.log("called ")
+        const originalPrice = parseFloat(document.getElementById("price2").value) || 0;
+        console.log(originalPrice)
+        const offer = parseFloat(document.getElementById("offer").value) || 0;
+        
+
+        // Calculate discount amount
+        const discountAmount = originalPrice - (originalPrice * offer) / 100;
+
+        // Display the discount amount
+        document.getElementById("discountAmount").value = discountAmount.toFixed(2);
+    }
+</script>

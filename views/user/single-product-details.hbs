@@ -1,3 +1,26 @@
+<script>
+  function addToCart(itemId) {
+    $.ajax({
+      url: '/add-to-cart/' + itemId,
+      method: 'get',
+      success: (response) => {
+        if (response.status) {
+          let count = $('#cart-count').html()
+          count = parseInt(count) + 1;
+          $("#cart-count").html(count)
+          Swal.fire({
+            title: 'Cart',
+            text: 'This Item added to cart',
+            icon: 'success',
+            confirmButtonText: 'Ok'
+          })
+        } else {
+          location.href = "/login"
+        }
+      }
+    })
+  }
+</script>
 <section class="py-5">
   <div class="container">
     <div class="row mb-5">
@@ -8,19 +31,19 @@
             <div class="owl-thumbs d-flex flex-row flex-sm-column" data-slider-id="1">
               {{#if product.firstImageExists}}
               <div class="owl-thumb-item flex-fill mb-2 mr-2 mr-sm-0"><img class="w-100"
-                  src="/images/{{product._id}}first.jpg" alt="..."></div>
+                  src="https://windows.mos.ap-southeast-2.sufybkt.com/images/{{product._id}}first.jpg" alt="..."></div>
               {{/if}}
               {{#if product.secondImageExists}}
               <div class="owl-thumb-item flex-fill mb-2 mr-2 mr-sm-0"><img class="w-100"
-                  src="/images/{{product._id}}second.jpg" alt="..."></div>
+                  src="https://windows.mos.ap-southeast-2.sufybkt.com/images/{{product._id}}second.jpg" alt="..."></div>
               {{/if}}
               {{#if product.thirdImageExists}}
               <div class="owl-thumb-item flex-fill mb-2 mr-2 mr-sm-0"><img class="w-100"
-                  src="/images/{{product._id}}third.jpg" alt="..."></div>
+                  src="https://windows.mos.ap-southeast-2.sufybkt.com/images/{{product._id}}third.jpg" alt="..."></div>
               {{/if}}
               {{#if product.fourthImageExists}}
               <div class="owl-thumb-item flex-fill mb-2">
-                <img class="w-100" src="/images/{{product._id}}fourth.jpg" alt="...">
+                <img class="w-100" src="https://windows.mos.ap-southeast-2.sufybkt.com/images/{{product._id}}fourth.jpg" alt="...">
               </div>
               {{/if}}
             </div>
@@ -28,24 +51,24 @@
           <div class="col-sm-10 order-1 order-sm-2">
             <div class="owl-carousel product-slider" data-slider-id="1">
 
-              <a class="d-block" src="/images/{{product._id}}first.jpg" data-lightbox="product"
+              <a class="d-block" src="https://windows.mos.ap-southeast-2.sufybkt.com/images/{{product._id}}first.jpg" data-lightbox="product"
                 title='{{product.name}}'>
-                <img class="img-fluid" src="/images/{{product._id}}first.jpg" alt="...">
+                <img class="img-fluid" src="https://windows.mos.ap-southeast-2.sufybkt.com/images/{{product._id}}first.jpg" alt="...">
               </a>
 
-              <a class="d-block" href="/images/{{product._id}}second.jpg" data-lightbox="product"
+              <a class="d-block" href="https://windows.mos.ap-southeast-2.sufybkt.com/images/{{product._id}}second.jpg" data-lightbox="product"
                 title='{{product.name}}'>
-                <img class="img-fluid" src="/images/{{product._id}}second.jpg" alt="...">
+                <img class="img-fluid" src="https://windows.mos.ap-southeast-2.sufybkt.com/images/{{product._id}}second.jpg" alt="...">
               </a>
 
-              <a class="d-block" href="/images/{{product._id}}third.jpg" data-lightbox="product"
+              <a class="d-block" href="https://windows.mos.ap-southeast-2.sufybkt.com/images/{{product._id}}third.jpg" data-lightbox="product"
                 title='{{product.name}}'>
-                <img class="img-fluid" src="/images/{{product._id}}third.jpg" alt="...">
+                <img class="img-fluid" src="https://windows.mos.ap-southeast-2.sufybkt.com/images/{{product._id}}third.jpg" alt="...">
               </a>
 
-              <a class="d-block" href="/images/{{product._id}}fourth.jpg" data-lightbox="product"
+              <a class="d-block" href="https://windows.mos.ap-southeast-2.sufybkt.com/images/{{product._id}}fourth.jpg" data-lightbox="product"
                 title='{{product.name}}'>
-                <img class="img-fluid" src="/images/{{product._id}}fourth.jpg" alt="...">
+                <img class="img-fluid" src="https://windows.mos.ap-southeast-2.sufybkt.com/images/{{product._id}}fourth.jpg" alt="...">
               </a>
             </div>
           </div>
@@ -102,7 +125,7 @@
         <div class="product text-center">
           <div class="position-relative mb-3">
             <div class="badge text-white badge-"></div><a class="d-block" href="/view-single-product/{{this._id}}"><img
-                class="img-fluid w-100" src="/images/{{this._id}}first.jpg" alt="..."></a>
+                class="img-fluid w-100" src="https://windows.mos.ap-southeast-2.sufybkt.com/images/{{this._id}}first.jpg" alt="..."></a>
             <div class="product-overlay">
               <ul class="mb-0 list-inline">
 
@@ -115,9 +138,10 @@
           </div>
           <h6> <a class="reset-anchor" href="#">{{this.name}}</a></h6>
           <p class="small text-muted">Original Price: ₹{{this.price2}}</p>
-          <p class="small text-muted">Offer: {{this.offer}} , Discount Price: ₹{{this.price}}</p>
+          <p class="small text-muted">Offer: {{this.offer}}%</p>
+          <p class="small text-muted">Discount Price: ₹{{this.price}}</p>
         </div>
-      </div>>
+      </div>
     </div>
     {{/each}}
   </div>
