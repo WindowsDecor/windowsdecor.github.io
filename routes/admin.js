@@ -6,6 +6,7 @@ const fs = require('fs');
 var db = require('../config/connection');
 const { default: axios } = require('axios');
 const { uploadImage ,deleteImage} = require("../helpers/imageUpload");
+const nodemailer = require('nodemailer');
 
 //twilio
 const accountSid = process.env.accountSid
@@ -45,52 +46,58 @@ router.get("/", async (req, res) => {
   }
 });
 
+
+// Configure Nodemailer
+const transporter = nodemailer.createTransport({
+  service: 'gmail', // Use your email provider
+  auth: {
+    user: 'windowsdecor1@gmail.com', // Replace with your email
+    pass: 'xjaz lykx ercp mhjz'   // Use App Passwords if using Gmail
+  }
+});
+
 router.post("/", (req, res) => {
   adminHelper.doLogin(req.body).then((responsem) => {
     if (responsem.status) {
-      adminHelper.otpsent(responsem.mobile).then((response) => {
-        axios.post(fastsmsapi, {
-          "route": "otp",
-          "variables_values": `${response.otp}`,
-          "numbers": `${responsem.mobile}`
-        }, {
-          headers: {
-            'Authorization': fastsmsapikey, // Replace with your auth token
-            'Content-Type': 'application/json', // Adjust as needed
-            // Add any other headers you need
-          }
-        })
-          .then(verificationResponse => {
+      adminHelper.otpsent(responsem.email).then((response) => {
+        
+        // Email content
+        const mailOptions = {
+          from: 'your-email@gmail.com',
+          to: responsem.email, // Send OTP to email instead of mobile
+          subject: 'Your OTP Code',
+          text: `Your OTP code is: ${response.otp}`
+        };
 
-            if (verificationResponse.data.return) {
-              // OTP verified successfully
-              console.log(responsem.mobile);
-              res.render("admin/otpverification", { token: response.token, otp: response.otp, mobile: responsem.mobile });
-            } else {
-              // OTP verification failed
-              req.session.loginErr = "OTP verification failed!";
-              res.redirect("/admin");
-            }
-          })
-          .catch(err => {
-            console.error("Error verifying OTP:", err);
-            req.session.loginErr = "Error verifying OTP!";
-            res.redirect("/admin");
-          });
-      })
+        // Send email
+        transporter.sendMail(mailOptions, (error, info) => {
+          if (error) {
+            console.error("Error sending OTP email:", error);
+            req.session.loginErr = "Error sending OTP!";
+            return res.redirect("/admin");
+          }
+
+          console.log(`OTP sent to ${responsem.email}`);
+          res.render("admin/otpverification", { token: response.token, otp: response.otp, email: responsem.email });
+        });
+      });
     } else {
       req.session.loginErr = "Invalid Username or Password!!";
       res.redirect("/admin");
     }
   });
 });
+
+
+// Verify OTP
 router.post("/otpverification", (req, res) => {
-  const { token, mobile, otp } = req.body;
-  adminHelper.verifyOTP(otp, token, mobile).then((response) => {
+  const { token, email, otp } = req.body;
+  
+  adminHelper.verifyOTP(otp, token, email).then((response) => {
     if (response) {
-      if (mobile === "9946995599") {
+      if (email === "windowscallcenter@gmail.com") {
         req.session.superadminloggedin = true;
-        req.session.superadmin = true
+        req.session.superadmin = true;
       }
       req.session.adminloggedIn = true;
       req.session.admin = response.admin;
@@ -101,9 +108,9 @@ router.post("/otpverification", (req, res) => {
     }
   }).catch(() => {
     res.redirect("/admin");
-  })
+  });
+});
 
-})
 
 
 router.get("/adminlogout", (req, res) => {
