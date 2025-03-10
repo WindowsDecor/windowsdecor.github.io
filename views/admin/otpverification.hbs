@@ -9,13 +9,13 @@
                     <div class="col-md-8">
                         <div class="mb-4">
                             <h3>OTP Verification</h3>
-                            <p>An OTP has been sent to {{mobile}}</p>
+                            <p>An OTP has been sent to {{email}}</p> <!-- Changed mobile to email -->
                         </div>
                         <form action="admin/otpverification" method="POST">
                             <input type="hidden" name="token" value="{{token}}" />
                             <div class="form-group first">
-                                <label for="mobile">Mobile Number</label>
-                                <input type="number" name="mobile" value="{{mobile}}" class="form-control" id="mobile" readonly />
+                                <label for="email">Email</label>
+                                <input type="email" name="email" value="{{email}}" class="form-control" id="email" readonly />
                             </div>
                             <div class="form-group first">
                                 <label for="otp">OTP</label>
