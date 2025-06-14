@@ -128,9 +128,12 @@
 <body>
 
 
-  {{#if user}}
-  {{>user-header}}
-  {{/if}}
+{{#if user}}
+  {{#unless (isExcludedPath currentPath)}}
+    {{>user-header}}
+  {{/unless}}
+{{/if}}
+
   {{#if admin}}
   {{>admin-header}}
   {{/if}}
@@ -139,8 +142,12 @@
   {{/if}}
   {{{body}}}
   {{#if user}}
+  {{#unless (isExcludedPath currentPath)}}
   {{>user-footer}}
+  {{/unless}}
   {{/if}}
+
+
 
 
 
