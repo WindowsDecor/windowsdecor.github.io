@@ -759,4 +759,73 @@ router.get("/sofasets-beanbags", async function (req, res, next) {
   }
 });
 
+router.get("/curtain", async function (req, res, next) {
+  try {
+    let user_login = req.session.user;
+    let cartCount = null;
+    let allCategory = await adminHelper.getALLCategory();
+
+    if (req.session.user) {
+      cartCount = await userHelper.getCartCount(req.session.user._id);
+    }
+
+    res.render("user/curtain", {
+      layout: false, // This will prevent the default layout from being used
+      user: true,
+      user_login,
+      cartCount,
+      allCategory,
+      title: "Curtains",
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/sofa", async function (req, res, next) {
+  try {
+    let user_login = req.session.user;
+    let cartCount = null;
+    let allCategory = await adminHelper.getALLCategory();
+
+    if (req.session.user) {
+      cartCount = await userHelper.getCartCount(req.session.user._id);
+    }
+
+    res.render("user/sofa", {
+      layout: false, // This will prevent the default layout from being used
+      user: true,
+      user_login,
+      cartCount,
+      allCategory,
+      title: "Sofa Sets",
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/wallpaper", async function (req, res, next) {
+  try {
+    let user_login = req.session.user;
+    let cartCount = null;
+    let allCategory = await adminHelper.getALLCategory();
+
+    if (req.session.user) {
+      cartCount = await userHelper.getCartCount(req.session.user._id);
+    }
+
+    res.render("user/wallpaper", {
+      layout: false, // This will prevent the default layout from being used
+      user: true,
+      user_login,
+      cartCount,
+      allCategory,
+      title: "Wallpapers",
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;

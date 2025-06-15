@@ -33,7 +33,12 @@ app.engine(
     handlebars: allowInsecurePrototypeAccess(Handlebars),
     helpers: {
       isExcludedPath: function (path) {
-        const excluded = ["/sofasets-beanbags", "/curtains"];
+        const excluded = [
+          "/sofasets-beanbags",
+          "/curtain",
+          "/sofa",
+          "/wallpaper",
+        ];
         return excluded.includes(path);
       },
     },
