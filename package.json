@@ -3,7 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "node ./bin/www"
+    "start": "node ./bin/www",
+    "export": "node scripts/export-and-serve.js",
+    "deploy": "npm run export && gh-pages -d build"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.705.0",
@@ -18,6 +20,7 @@
     "express-fileupload": "^1.2.1",
     "express-handlebars": "^5.2.0",
     "express-session": "^1.17.2",
+    "fs-extra": "^11.3.0",
     "gsap": "^3.13.0",
     "hbs": "^4.1.2",
     "http-errors": "~1.6.3",
@@ -27,11 +30,13 @@
     "nodemailer": "^7.0.3",
     "nodemon": "^2.0.19",
     "popups": "^1.1.3",
+    "puppeteer": "^24.10.2",
     "razorpay": "^2.0.6",
     "twilio": "^3.77.2",
     "uuid": "^10.0.0"
   },
   "devDependencies": {
+    "gh-pages": "^6.3.0",
     "handlebars": "^4.5.3"
   }
 }
