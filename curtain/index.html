@@ -1,5 +1,6 @@
 <html lang="en">
   <head>
+    
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
@@ -143,6 +144,9 @@
         padding: 0;
         white-space: nowrap;
       }
+      .carousel-indicator-number {
+        font-size: 2rem;
+      }
       .carousel-indicators li.active {
         color: #fff;
         font-weight: bold;
@@ -259,6 +263,9 @@
           font-size: 1rem !important;
           margin: 0 3px !important;
         }
+        .carousel-indicator-number {
+          font-size: 3rem !important;
+        }
         .carousel-caption {
           left: 5% !important;
           right: 5% !important;
@@ -278,15 +285,14 @@
           font-size: 1rem !important;
         }
         button[style*="font-size: 3rem"] {
-          font-size: 1.2rem !important;
+          font-size: 2rem !important;
           padding: 0.5rem 1rem !important;
         } /* Hide modern-styled-entryway.jpg images in
       mobile */
         img[src*="modern-styled-entryway.jpg"] {
           display: none !important;
         } /* Introduction Section Mobile */
-        section[style*="padding: 0
-      250px"] {
+        section[style*="padding: 0 250px"] {
           padding: 10px 20px !important;
           min-height: auto !important;
           margin-top: 1rem !important;
@@ -302,8 +308,7 @@
         div[style*="right: 35%"] {
           display: none !important;
         }
-        div[style*="left:
-      35%"] {
+        div[style*="left: 35%"] {
           display: none !important;
         } /* Category Section Mobile */
         .circular-image-container {
@@ -332,11 +337,11 @@
           min-height: auto !important;
           padding: 10px 20px !important;
         }
-        h2[style*="font-size: 3.5rem"] {
+        .mobile-heading {
           font-size: 1.8rem !important;
           text-align: center !important;
         }
-        h3[style*="font-size: 2.5rem"] {
+        .mobile-subheading {
           font-size: 1.3rem !important;
           text-align: center !important;
         } /* Content Sections Mobile - Reduce spacing */
@@ -349,7 +354,7 @@
           font-size: 1rem !important;
           text-align: center !important;
         }
-        img[style*="position: absolute"][style*="height: 450px"] {
+        .desktop-only-image {
           display: none !important;
         }
         div[style*="margin-left: -15%"] {
@@ -358,8 +363,7 @@
         div[style*="left: 70%"] {
           display: none !important;
         }
-        div[style*="right:
-      70%"] {
+        div[style*="right: 70%"] {
           display: none !important;
         } /* Fix Introduction Section text
       spacing */
@@ -442,7 +446,7 @@
           gap: 0.3rem !important;
         }
         .carousel-indicators li {
-          font-size: 0.9rem !important;
+          font-size: 1.3rem !important;
           margin: 0 2px !important;
         }
         .carousel-caption {
@@ -460,10 +464,9 @@
         }
         .corporate-link {
           right: 15px !important;
-          font-size: 0.9rem !important;
+          font-size: 1.4rem !important;
         }
-        button[style*="font-size:
-      3rem"] {
+        .mobile-button {
           font-size: 1rem !important;
           padding: 0.4rem 0.8rem !important;
         }
@@ -496,23 +499,22 @@
           text-align: center !important;
         }
         .description-box {
-          padding: 10px 20px !important;
+          padding: 15px 25px !important;
           text-align: center !important;
         }
         .description-box p {
-          font-size: 0.9rem !important;
+          font-size: 1.7rem !important;
           text-align: center !important;
         }
         h2[style*="font-size: 3.5rem"] {
-          font-size: 1.5rem !important;
+          font-size: 2rem !important;
           text-align: center !important;
         }
         h3[style*="font-size: 2.5rem"] {
-          font-size: 1.2rem !important;
+          font-size: 1.5rem !important;
           text-align: center !important;
         }
-        section[style*="min-height:
-      100vh"] {
+        .mobile-section {
           padding: 10px 20px !important;
         } /* Content Sections Phone -
       Further reduce spacing */
@@ -593,50 +595,68 @@
       @media (max-width: 480px) {
         /* Hero Section Extra Small */
         .carousel-title {
-          font-size: 1.1rem !important;
+          font-size: 3rem !important;
+          line-height: 5rem !important;
           text-align: center !important;
+        }
+        .carousel-slide{
+          height: 70vh !important;
+        }
+        .main-cta {
+          font-size: 2rem !important;
+          padding: 1rem 1.5rem !important;
         }
         .carousel-caption {
           left: 2% !important;
           right: 2% !important;
           text-align: center !important;
         }
-        button[style*="font-size:
-      3rem"] {
+        .slider-container {
+          width: 100%!important;
+          max-height: 70vh !important;
+        }
+        .hero-section {
+          height: 70vh !important;
+        }
+        .mobile-button-small {
           font-size: 0.9rem !important;
           padding: 0.3rem 0.6rem !important;
         } /* Introduction Section Extra Small */
         .gradient-text {
-          font-size: 0.9rem !important;
+          font-size: 2rem !important;
           text-align: center !important;
         }
-        section[style*="padding: 0 250px"] {
+        .mobile-intro-small {
           padding: 10px 20px !important;
           margin-top: 0 !important;
           text-align: center !important;
         } /* Category
       Section Extra Small */
         .circular-image-container {
-          width: 160px !important;
-          height: 200px !important;
+          width: 100% !important;
+          height: 350px !important;
         }
         .card-content h5 {
-          font-size: 0.9rem !important;
+          font-size: 2rem !important;
           text-align: center !important;
         }
-        h2[style*="font-size:
-      3.5rem"] {
+
+        .card-content {
+          padding: 0 !important;
+          text-align: center !important;
+        }
+        .mobile-heading-small {
           font-size: 1.3rem !important;
           text-align: center !important;
         }
-        h3[style*="font-size: 2.5rem"] {
+        .mobile-subheading-small {
           font-size: 1.1rem !important;
           text-align: center !important;
         }
-        section[style*="min-height: 100vh"] {
+        .mobile-section-small {
           padding: 10px 20px !important;
         } /* Content Sections Extra Small - Minimal spacing */
-        section[style*="background-color: #404040"] {
+        .mobile-content-section-small {
           padding: 10px 20px !important;
           margin: 0.25rem 0 !important;
           text-align: center !important;
@@ -660,14 +680,14 @@
           padding: 10px 20px !important;
         }
         section[style*="background-color: #404040"] h2 {
-          font-size: 1.2rem !important;
+          font-size: 2.1rem !important;
           margin-bottom: 0.4rem !important;
           text-align: center !important;
         }
         .content-text p {
           margin-bottom: 0.5rem !important;
           line-height: 1.4 !important;
-          font-size: 0.8rem !important;
+          font-size: 1.8rem !important;
           text-align: center !important;
         }
         .content-text p.mb-3 {
@@ -678,7 +698,7 @@
           margin-bottom: 0.6rem !important;
           text-align: center !important;
         }
-        p[style*="font-size: 2.1rem"] {
+        .mobile-text-small {
           font-size: 0.9rem !important;
           text-align: center !important;
         }
@@ -704,12 +724,12 @@
         <!-- Hero Section with Full-Width Slider -->
         <section class="hero-section">
           <div class="slider-container">
-            <div id="sofaCarousel" class="carousel slide" data-ride="carousel">
+            <div id="sofaCarousel" class="carousel-slide" data-ride="carousel">
               <ol class="carousel-indicators" style="gap: 1rem">
                 <li
                   data-target="#sofaCarousel"
                   data-slide-to="0"
-                  class="active"
+                  class="active carousel-indicator-number"
                   data-number="1"
                   style="font-size: 2rem"
                 >
@@ -718,6 +738,7 @@
                 <li
                   data-target="#sofaCarousel"
                   data-slide-to="1"
+                  class="carousel-indicator-number"
                   data-number="2"
                   style="font-size: 2rem"
                 >
@@ -726,6 +747,7 @@
                 <li
                   data-target="#sofaCarousel"
                   data-slide-to="2"
+                  class="carousel-indicator-number"
                   data-number="3"
                   style="font-size: 2rem"
                 >
@@ -737,7 +759,7 @@
                   <div
                     class="carousel-background"
                     style="
-                      background-image: url('/public/assets/img/windows-bg.jpg');
+                      background-image: url('/public/assets/img/curtain/curtain-1.jpg');
                     "
                   >
                     <div class="carousel-overlay"></div>
@@ -748,8 +770,10 @@
                         Elegant Window Treatments for Every Home
                       </h1>
 
-                      <button
-                        class="btn"
+                      <a
+                        href="https://wa.me/918075377305"
+                        target="_blank"
+                        class="btn main-cta"
                         style="
                           background-color: #000;
                           color: #fff;
@@ -757,10 +781,12 @@
                           margin-top: 2rem;
                           padding: 1rem 2rem;
                           border-radius: 0.5rem;
+                          text-decoration: none;
+                          display: inline-block;
                         "
                       >
-                        Contact Us
-                      </button>
+                        Visit Our Store
+                      </a>
                     </div>
                   </div>
                 </div>
@@ -768,7 +794,7 @@
                   <div
                     class="carousel-background"
                     style="
-                      background-image: url('/public/assets/img/windows-bg.jpg');
+                      background-image: url('/public/assets/img/curtain/curtain-2.jpg');
                     "
                   >
                     <div class="carousel-overlay"></div>
@@ -780,8 +806,10 @@
                         In Kannur
                       </h1>
 
-                      <button
-                        class="btn"
+                      <a
+                        href="https://wa.me/918075377305"
+                        target="_blank"
+                        class="btn main-cta"
                         style="
                           background-color: #000;
                           color: #fff;
@@ -789,10 +817,12 @@
                           margin-top: 2rem;
                           padding: 1rem 2rem;
                           border-radius: 0.5rem;
+                          text-decoration: none;
+                          display: inline-block;
                         "
                       >
-                        Contact Us
-                      </button>
+                        Visit Our Store
+                      </a>
                     </div>
                   </div>
                 </div>
@@ -800,7 +830,7 @@
                   <div
                     class="carousel-background"
                     style="
-                      background-image: url('/public/assets/img/windows-bg.jpg');
+                      background-image: url('/public/assets/img/curtain/curtain-3.jpg');
                     "
                   >
                     <div class="carousel-overlay"></div>
@@ -813,7 +843,7 @@
                       </h1>
 
                       <button
-                        class="btn"
+                        class="btn main-cta"
                         style="
                           background-color: #000;
                           color: #fff;
@@ -903,18 +933,18 @@ enhance the charm of your interiors.
                 </div>
                 <div
                   class="col-lg-4"
-                  style="position: absolute; top: -73%; right: -10%"
+                  style="position: absolute; top: -80%; right: -10%"
                 >
                   <div class="text-center" style="">
                     <img
-                      src="/public/assets/img/modern-styled-entryway.jpg"
+                      src="/public/assets/img/blinds/blinds-1.jpg"
                       alt="Interior Decor"
                       class=""
                       style="
-                        max-width: 100%;
-                        height: auto;
+                        width: 30rem;
+                        height: 37rem;
                         background-color: #504e4e;
-                        border-radius: 45% 45% 0% 0%;
+                        border-radius: 46% 46% 0% 0%;
                         border: #fff 20px solid;
                       "
                     />
@@ -966,7 +996,7 @@ enhance the charm of your interiors.
                       >
                         <img
                           class="img-fluid w-100 h-100"
-                          src="/public/assets/img/windows-bg.jpg"
+                          src="/public/assets/img/curtain/curtain-3.jpg"
                           alt="Interior Design Package 1"
                           style="object-fit: cover"
                         />
@@ -980,7 +1010,9 @@ enhance the charm of your interiors.
                             transition: opacity 0.3s ease;
                           "
                         >
-                          <button
+                          <a
+                            href="https://wa.me/918075377305"
+                            target="_blank"
                             class="btn text-white mb-4"
                             style="
                               background-color: #000;
@@ -988,10 +1020,12 @@ enhance the charm of your interiors.
                               border-radius: 5px;
                               font-size: 1.5rem;
                               font-weight: 500;
+                              text-decoration: none;
+                              display: inline-block;
                             "
                           >
-                            Contact Us
-                          </button>
+                            View Product
+                          </a>
                         </div>
                       </div>
                     </div>
@@ -1058,7 +1092,7 @@ enhance the charm of your interiors.
                       >
                         <img
                           class="img-fluid w-100 h-100"
-                          src="/public/assets/img/windows-bg.jpg"
+                          src="/public/assets/img/blinds/blinds-2.jpg"
                           alt="Interior Design Package 1"
                           style="object-fit: cover"
                         />
@@ -1072,7 +1106,9 @@ enhance the charm of your interiors.
                             transition: opacity 0.3s ease;
                           "
                         >
-                          <button
+                          <a
+                            href="https://wa.me/918075377305"
+                            target="_blank"
                             class="btn text-white mb-4"
                             style="
                               background-color: #000;
@@ -1080,10 +1116,12 @@ enhance the charm of your interiors.
                               border-radius: 5px;
                               font-size: 1.5rem;
                               font-weight: 500;
+                              text-decoration: none;
+                              display: inline-block;
                             "
                           >
-                            Contact Us
-                          </button>
+                            View Product
+                          </a>
                         </div>
                       </div>
                     </div>
@@ -1150,7 +1188,7 @@ enhance the charm of your interiors.
                       >
                         <img
                           class="img-fluid w-100 h-100"
-                          src="/public/assets/img/windows-bg.jpg"
+                          src="/public/assets/img/blinds/blinds-3.jpg"
                           alt="Interior Design Package 1"
                           style="object-fit: cover"
                         />
@@ -1164,7 +1202,9 @@ enhance the charm of your interiors.
                             transition: opacity 0.3s ease;
                           "
                         >
-                          <button
+                          <a
+                            href="https://wa.me/918075377305"
+                            target="_blank"
                             class="btn text-white mb-4"
                             style="
                               background-color: #000;
@@ -1172,10 +1212,12 @@ enhance the charm of your interiors.
                               border-radius: 5px;
                               font-size: 1.5rem;
                               font-weight: 500;
+                              text-decoration: none;
+                              display: inline-block;
                             "
                           >
-                            Contact Us
-                          </button>
+                            View Product
+                          </a>
                         </div>
                       </div>
                     </div>
@@ -1239,20 +1281,20 @@ enhance the charm of your interiors.
           >
             <div class="container" style="position: relative">
               <img
-                src="/public/assets/img/modern-styled-entryway.jpg"
+                src="/public/assets/img/blinds/blinds-1.jpg"
                 alt="Elegant Sofa Collection"
-                class=""
+                class="desktop-only-image"
                 style="
                   width: auto;
                   height: 450px;
                   z-index: 10;
                   object-fit: contain;
                   position: absolute;
-                  top: 45%;
+                  top: 38%;
                   transform: translateY(-50%);
                   left: 90%;
                   border: 15px solid #fff;
-                  border-radius: 44% 44% 0% 0%;
+                  border-radius: 48% 48% 0% 0%;
                 "
               />
               <div class="text-center mb-5">
@@ -1324,20 +1366,20 @@ enhance the charm of your interiors.
           >
             <div class="container" style="position: relative">
               <img
-                src="/public/assets/img/modern-styled-entryway.jpg"
+                src="/public/assets/img/blinds/blinds-2.jpg"
                 alt="Elegant Sofa Collection"
-                class=""
+                class="desktop-only-image"
                 style="
                   width: auto;
                   height: 450px;
                   z-index: 10;
                   object-fit: contain;
                   position: absolute;
-                  top: 49%;
+                  top: 51%;
                   transform: translateY(-50%);
-                  right: 90%;
+                  right: 92%;
                   border: 15px solid #fff;
-                  border-radius: 44% 44% 0% 0%;
+                  border-radius: 48% 48% 0% 0%;
                 "
               />
               <div class="text-center mb-5">
@@ -1418,20 +1460,20 @@ enhance the charm of your interiors.
           >
             <div class="container" style="position: relative">
               <img
-                src="/public/assets/img/modern-styled-entryway.jpg"
+                src="/public/assets/img/blinds/blinds-3.jpg"
                 alt="Elegant Sofa Collection"
-                class=""
+                class="desktop-only-image"
                 style="
                   width: auto;
                   height: 450px;
                   z-index: 10;
                   object-fit: contain;
                   position: absolute;
-                  top: 45%;
+                  top: 47%;
                   transform: translateY(-50%);
                   left: 90%;
                   border: 15px solid #fff;
-                  border-radius: 44% 44% 0% 0%;
+                  border-radius: 48% 48% 0% 0%;
                 "
               />
               <div class="text-center mb-5">
@@ -1648,7 +1690,8 @@ enhance the charm of your interiors.
                 <ul class="footer-links list-unstyled">
                   <li class="mb-3">
                     <a
-                      href="#"
+                      href="https://pin.it/2udp2EnRI"
+                      target="_blank"
                       style="
                         color: white;
                         text-decoration: underline;
@@ -1660,7 +1703,8 @@ enhance the charm of your interiors.
                   </li>
                   <li class="mb-3">
                     <a
-                      href="#"
+                      href="https://www.instagram.com/windowshomedecor?igsh=MW9pbnhvd2lpY3poYg=="
+                      target="_blank"
                       style="
                         color: white;
                         text-decoration: underline;
@@ -1672,7 +1716,8 @@ enhance the charm of your interiors.
                   </li>
                   <li class="mb-3">
                     <a
-                      href="#"
+                      href="https://www.facebook.com/profile.php?id=61554566603109&mibextid=LQQJ4d"
+                      target="_blank"
                       style="
                         color: white;
                         text-decoration: underline;
@@ -1684,7 +1729,8 @@ enhance the charm of your interiors.
                   </li>
                   <li class="mb-3">
                     <a
-                      href="#"
+                      href="https://www.linkedin.com/company/windowsdecor/"
+                      target="_blank"
                       style="
                         color: white;
                         text-decoration: underline;
@@ -1713,5 +1759,22 @@ enhance the charm of your interiors.
         </footer>
       </div>
     </div>
+
+        <!-- Carousel Initialization Script -->
+        <script>
+          $(document).ready(function() {
+            // Initialize the carousel
+            $('#sofaCarousel').carousel({
+              interval: 5000, // Auto-slide every 5 seconds
+              pause: 'hover'   // Pause on hover
+            });
+            
+            // Enable manual navigation with indicators
+            $('.carousel-indicators li').on('click', function() {
+              var slideTo = $(this).data('slide-to');
+              $('#sofaCarousel').carousel(slideTo);
+            });
+          });
+        </script>
   </body>
 </html>
